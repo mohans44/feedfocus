@@ -179,6 +179,7 @@ const Home = () => {
     if (meData?.user) return items;
     return items.slice(0, 12);
   }, [stories, meData?.user]);
+  const showInitialLoading = isCategoryLoading && !stories.length;
 
   useEffect(() => {
     setCarouselIndex(0);
@@ -281,7 +282,7 @@ const Home = () => {
   }, [extraItems.length]);
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6 sm:space-y-10">
       {!meData?.user ? (
         <section className="glass top-sheen rounded-[32px] p-6 shadow-soft sm:p-8">
           <div className="flex flex-col gap-6">
@@ -309,19 +310,19 @@ const Home = () => {
         </section>
       ) : null}
 
-      <section className="space-y-4">
+      <section className="space-y-2 sm:space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl sm:text-2xl">Explore categories</h2>
+          <h2 className="text-base sm:text-2xl">Categories</h2>
           <span className="hidden text-sm text-muted-foreground sm:inline">
             Topic-aware feed
           </span>
         </div>
-        <div className="scrollbar-none flex gap-3 overflow-x-auto pb-2">
+        <div className="scrollbar-none flex gap-2 overflow-x-auto pb-1.5 sm:gap-3 sm:pb-2">
           {categories.map((category) => (
             <button
               key={category.value}
               type="button"
-              className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm ${
                 category.value === selectedTopic
                   ? "border-accent/55 bg-accent text-accent-foreground shadow-[0_8px_20px_-16px_hsl(var(--accent))]"
                   : "border-border/90 bg-card/70 text-foreground hover:bg-muted/70"
@@ -342,12 +343,19 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="space-y-6">
-        {isCategoryLoading ? (
-          <div className="h-52 rounded-3xl bg-muted animate-pulse sm:h-64" />
+      <section className="space-y-4 sm:space-y-6">
+        {showInitialLoading ? (
+          <div className="space-y-3 sm:space-y-4">
+            <div className="skeleton h-[180px] rounded-3xl sm:h-[300px] lg:h-[420px]" />
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {[...Array(6)].map((_, idx) => (
+                <div key={idx} className="skeleton h-40 rounded-2xl sm:h-48" />
+              ))}
+            </div>
+          </div>
         ) : null}
 
-        {!stories.length && !isCategoryLoading ? (
+        {!stories.length && !showInitialLoading ? (
           <p className="text-sm text-muted-foreground">
             No articles found for this category yet.
           </p>

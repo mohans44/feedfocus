@@ -31,6 +31,10 @@ const FEED_ITEM_LIMIT = Number(process.env.CRAWLER_FEED_ITEM_LIMIT || 140);
 const MAX_SITEMAP_URLS = Number(process.env.CRAWLER_MAX_SITEMAP_URLS || 1200);
 const MAX_ARTICLE_AGE_HOURS = Number(process.env.CRAWLER_MAX_ARTICLE_AGE_HOURS || 72);
 const ENABLE_HOMEPAGE_DISCOVERY = process.env.CRAWLER_ENABLE_HOMEPAGE_DISCOVERY === "true";
+const ALLOWED_LANGUAGES = (process.env.CRAWLER_ALLOWED_LANGUAGES || "en")
+  .split(",")
+  .map((item) => item.trim().toLowerCase())
+  .filter(Boolean);
 
 const TRACKING_QUERY_PREFIXES = ["utm_", "fbclid", "gclid", "mc_", "ref", "cmpid", "igshid", "mkt_tok"];
 const BLOCKED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".pdf", ".mp4", ".mp3", ".zip"];
@@ -103,6 +107,18 @@ const isRecentEnough = (date) => {
 };
 const normalizeTopic = (value = "") => TOPIC_ALIASES[String(value).toLowerCase().trim()] || null;
 const cleanText = (value = "") => value.replace(/\s+/g, " ").trim();
+const normalizeLang = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .replace("_", "-")
+    .split("-")[0]
+    .trim();
+const isAllowedLanguage = (value = "") => {
+  if (!value) return true;
+  const normalized = normalizeLang(value);
+  if (!normalized) return true;
+  return ALLOWED_LANGUAGES.includes(normalized);
+};
 const parseDateFromUrl = (url = "") => {
   const match = String(url).match(/(20\d{2})[\/-](0[1-9]|1[0-2])[\/-](0[1-9]|[12]\d|3[01])/);
   if (!match) return null;
@@ -310,27 +326,55 @@ const extractRssCategory = ($item) => {
 
 const parseRssItems = (xml, baseUrl, { topicHint = null } = {}) => {
   const $ = cheerio.load(xml, { xml: true });
+  const feedLanguage =
+    cleanText($("rss > channel > language").first().text()) ||
+    cleanText($("feed > language").first().text()) ||
+    "";
   const candidates = [];
 
   $("item").each((_, item) => {
     const $item = $(item);
+    const itemLanguage =
+      cleanText($item.find("dc\\:language").first().text()) ||
+      cleanText($item.find("language").first().text()) ||
+      feedLanguage;
+    if (!isAllowedLanguage(itemLanguage)) return;
     const link = $item.find("link").first().text().trim() || $item.find("guid").first().text().trim();
     const url = normalizeUrl(baseUrl, link);
     if (!url) return;
     const publishedAt =
       parseDateSafe($item.find("pubDate").first().text().trim()) || parseDateSafe($item.find("dc\\:date").first().text().trim());
     if (!isRecentEnough(publishedAt)) return;
+    const description = cleanText(
+      $item.find("content\\:encoded").first().text() ||
+        $item.find("description").first().text() ||
+        $item.find("summary").first().text()
+    );
+    const imageUrl =
+      $item.find("media\\:content").first().attr("url") ||
+      $item.find("media\\:thumbnail").first().attr("url") ||
+      $item.find("enclosure[type^='image']").first().attr("url") ||
+      null;
     candidates.push({
       url,
       titleHint: cleanText($item.find("title").first().text()) || null,
       publishedAt,
       sourceHint: "rss",
       topicHint: normalizeTopic(topicHint) || extractRssCategory($item) || null,
+      summaryHint: description ? description.slice(0, 320) : null,
+      contentHint: description && description.length >= 120 ? description : null,
+      imageHint: imageUrl || null,
+      languageHint: itemLanguage ? normalizeLang(itemLanguage) : null,
     });
   });
 
   $("entry").each((_, entry) => {
     const $entry = $(entry);
+    const itemLanguage =
+      cleanText($entry.find("dc\\:language").first().text()) ||
+      cleanText($entry.find("language").first().text()) ||
+      feedLanguage;
+    if (!isAllowedLanguage(itemLanguage)) return;
     const link =
       $entry.find("link[rel='alternate']").attr("href") ||
       $entry.find("link").first().attr("href") ||
@@ -340,12 +384,25 @@ const parseRssItems = (xml, baseUrl, { topicHint = null } = {}) => {
     const publishedAt =
       parseDateSafe($entry.find("published").first().text().trim()) || parseDateSafe($entry.find("updated").first().text().trim());
     if (!isRecentEnough(publishedAt)) return;
+    const description = cleanText(
+      $entry.find("content").first().text() ||
+        $entry.find("summary").first().text() ||
+        $entry.find("content\\:encoded").first().text()
+    );
+    const imageUrl =
+      $entry.find("media\\:content").first().attr("url") ||
+      $entry.find("media\\:thumbnail").first().attr("url") ||
+      null;
     candidates.push({
       url,
       titleHint: cleanText($entry.find("title").first().text()) || null,
       publishedAt,
       sourceHint: "rss",
       topicHint: normalizeTopic(topicHint) || null,
+      summaryHint: description ? description.slice(0, 320) : null,
+      contentHint: description && description.length >= 120 ? description : null,
+      imageHint: imageUrl || null,
+      languageHint: itemLanguage ? normalizeLang(itemLanguage) : null,
     });
   });
 
@@ -487,77 +544,25 @@ const extractJsonLdArticleData = ($) => {
   return null;
 };
 
-const extractArticle = async (candidate, publisher) => {
-  const html = await fetchWithRetry(candidate.url, { accept: "text/html,application/xhtml+xml,*/*" });
-  const dom = new JSDOM(html, { url: candidate.url });
-  const reader = new Readability(dom.window.document);
-  const readable = reader.parse();
-  const $ = cheerio.load(html);
-  const jsonLd = extractJsonLdArticleData($);
-
-  const title =
-    extractMetaContent($, ["meta[property='og:title']", "meta[name='twitter:title']"]) ||
-    jsonLd?.headline ||
-    cleanText(readable?.title || "") ||
-    cleanText($("h1").first().text()) ||
-    candidate.titleHint ||
-    null;
-
-  const publishedAt =
-    parseDateSafe(
-      extractMetaContent($, [
-        "meta[property='article:published_time']",
-        "meta[name='publish-date']",
-        "meta[name='pubdate']",
-        "meta[name='date']",
-        "meta[itemprop='datePublished']",
-        "time[datetime]",
-      ])
-    ) ||
-    parseDateSafe(jsonLd?.datePublished) ||
-    candidate.publishedAt ||
-    parseDateFromUrl(candidate.url) ||
-    null;
-
-  if (!hasValidDate(publishedAt)) throw new Error("Missing published date");
-  if (!isRecentEnough(publishedAt)) throw new Error("Too old");
-
-  const imageUrl =
-    extractMetaContent($, ["meta[property='og:image']", "meta[name='twitter:image']", "meta[itemprop='image']"]) ||
-    jsonLd?.image ||
-    null;
-
-  const language =
-    $("html").attr("lang")?.split("-")[0]?.toLowerCase() ||
-    extractMetaContent($, ["meta[property='og:locale']", "meta[name='language']"])?.slice(0, 2)?.toLowerCase() ||
-    "en";
-
-  const readabilityText = cleanText(readable?.textContent || "");
-  const articleNodeText = cleanText(
-    $("article p")
-      .map((_, p) => $(p).text())
-      .get()
-      .join(" ")
-  );
-  const jsonLdBody = cleanText(jsonLd?.articleBody || "");
-  const content = [readabilityText, articleNodeText, jsonLdBody]
-    .filter(Boolean)
-    .sort((a, b) => b.length - a.length)[0];
-
-  if (!title || !content || content.length < 220) throw new Error("Insufficient content");
-
-  const summary = content.slice(0, 320);
-  const inferredTopics = inferTopicsFromText(`${title} ${summary} ${content.slice(0, 3000)}`);
-  const hintedTopic = normalizeTopic(candidate.topicHint || "");
-  const topics = Array.from(new Set([hintedTopic, ...inferredTopics].filter(Boolean))).slice(0, 3);
+const upsertArticleFromParts = async ({
+  url,
+  title,
+  publisher,
+  publishedAt,
+  summary,
+  content,
+  topics,
+  language,
+  imageUrl,
+  sourceType,
+}) => {
   const primaryCategory = topics[0] || "world";
-
   await Article.updateOne(
-    { url: candidate.url },
+    { url },
     {
       $set: {
         title,
-        publisher: publisher.name,
+        publisher,
         publishedAt,
         fetchedAt: new Date(),
         summary,
@@ -565,12 +570,138 @@ const extractArticle = async (candidate, publisher) => {
         topics,
         primaryCategory,
         language,
-        imageUrl,
-        sourceType: candidate.sourceHint || "crawl",
+        imageUrl: imageUrl || null,
+        sourceType,
       },
     },
     { upsert: true }
   );
+};
+
+const extractArticle = async (candidate, publisher) => {
+  const fallbackFromFeed = async () => {
+    const title = candidate.titleHint || null;
+    const content = cleanText(candidate.contentHint || "");
+    const publishedAt = candidate.publishedAt || parseDateFromUrl(candidate.url) || null;
+    const language = normalizeLang(candidate.languageHint || "en");
+
+    if (!title || !content || content.length < 120) {
+      throw new Error("Insufficient content");
+    }
+    if (!hasValidDate(publishedAt)) throw new Error("Missing published date");
+    if (!isRecentEnough(publishedAt)) throw new Error("Too old");
+    if (!isAllowedLanguage(language)) throw new Error("Non-English article");
+
+    const summary = cleanText(candidate.summaryHint || content.slice(0, 320));
+    const inferredTopics = inferTopicsFromText(`${title} ${summary} ${content.slice(0, 3000)}`);
+    const hintedTopic = normalizeTopic(candidate.topicHint || "");
+    const topics = Array.from(new Set([hintedTopic, ...inferredTopics].filter(Boolean))).slice(0, 3);
+
+    await upsertArticleFromParts({
+      url: candidate.url,
+      title,
+      publisher: publisher.name,
+      publishedAt,
+      summary,
+      content,
+      topics,
+      language,
+      imageUrl: candidate.imageHint || null,
+      sourceType: "rss",
+    });
+  };
+
+  try {
+    const html = await fetchWithRetry(candidate.url, { accept: "text/html,application/xhtml+xml,*/*" });
+    const dom = new JSDOM(html, { url: candidate.url });
+    const reader = new Readability(dom.window.document);
+    const readable = reader.parse();
+    const $ = cheerio.load(html);
+    const jsonLd = extractJsonLdArticleData($);
+
+    const title =
+      extractMetaContent($, ["meta[property='og:title']", "meta[name='twitter:title']"]) ||
+      jsonLd?.headline ||
+      cleanText(readable?.title || "") ||
+      cleanText($("h1").first().text()) ||
+      candidate.titleHint ||
+      null;
+
+    const publishedAt =
+      parseDateSafe(
+        extractMetaContent($, [
+          "meta[property='article:published_time']",
+          "meta[name='publish-date']",
+          "meta[name='pubdate']",
+          "meta[name='date']",
+          "meta[itemprop='datePublished']",
+          "time[datetime]",
+        ])
+      ) ||
+      parseDateSafe(jsonLd?.datePublished) ||
+      candidate.publishedAt ||
+      parseDateFromUrl(candidate.url) ||
+      null;
+
+    if (!hasValidDate(publishedAt)) throw new Error("Missing published date");
+    if (!isRecentEnough(publishedAt)) throw new Error("Too old");
+
+    const imageUrl =
+      extractMetaContent($, ["meta[property='og:image']", "meta[name='twitter:image']", "meta[itemprop='image']"]) ||
+      jsonLd?.image ||
+      candidate.imageHint ||
+      null;
+
+    const language =
+      normalizeLang(
+        $("html").attr("lang") ||
+          extractMetaContent($, ["meta[property='og:locale']", "meta[name='language']"]) ||
+          candidate.languageHint ||
+          "en"
+      ) || "en";
+    if (!isAllowedLanguage(language)) throw new Error("Non-English article");
+
+    const readabilityText = cleanText(readable?.textContent || "");
+    const articleNodeText = cleanText(
+      $("article p")
+        .map((_, p) => $(p).text())
+        .get()
+        .join(" ")
+    );
+    const jsonLdBody = cleanText(jsonLd?.articleBody || "");
+    const fallbackContent = cleanText(candidate.contentHint || "");
+    const content = [readabilityText, articleNodeText, jsonLdBody, fallbackContent]
+      .filter(Boolean)
+      .sort((a, b) => b.length - a.length)[0];
+
+    if (!title || !content || content.length < 220) {
+      if (candidate.sourceHint === "rss") return fallbackFromFeed();
+      throw new Error("Insufficient content");
+    }
+
+    const summary = cleanText(candidate.summaryHint || content.slice(0, 320));
+    const inferredTopics = inferTopicsFromText(`${title} ${summary} ${content.slice(0, 3000)}`);
+    const hintedTopic = normalizeTopic(candidate.topicHint || "");
+    const topics = Array.from(new Set([hintedTopic, ...inferredTopics].filter(Boolean))).slice(0, 3);
+
+    await upsertArticleFromParts({
+      url: candidate.url,
+      title,
+      publisher: publisher.name,
+      publishedAt,
+      summary,
+      content,
+      topics,
+      language,
+      imageUrl,
+      sourceType: candidate.sourceHint || "crawl",
+    });
+  } catch (error) {
+    if (candidate.sourceHint === "rss") {
+      return fallbackFromFeed();
+    }
+    throw error;
+  }
 };
 
 const discoverPublisherCandidates = async (publisher) => {

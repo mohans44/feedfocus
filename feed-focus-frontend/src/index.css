@@ -93,3 +93,23 @@ h1, h2, h3, h4 {
   background: transparent;
   opacity: 0;
 }
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted) / 0.65) 20%,
+    hsl(var(--card) / 0.85) 50%,
+    hsl(var(--muted) / 0.65) 80%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.4s linear infinite;
+}

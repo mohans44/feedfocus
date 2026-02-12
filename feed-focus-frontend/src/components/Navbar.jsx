@@ -176,7 +176,7 @@ const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/70 backdrop-blur-lg">
-      <div className="container flex h-16 items-center justify-between gap-3">
+      <div className="container flex h-14 items-center justify-between gap-2 sm:h-16 sm:gap-3">
         <button
           type="button"
           className="flex items-center gap-3 rounded-full px-1 py-1"
@@ -221,6 +221,18 @@ const Navbar = () => {
         )}
 
         <div className="flex items-center gap-1 sm:gap-2">
+          {meData?.user ? (
+            <Button
+              variant="ghost"
+              size="icon"
+              type="button"
+              aria-label="Search"
+              className="md:hidden"
+              onClick={() => navigate("/search")}
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          ) : null}
           <Button
             variant="ghost"
             size="icon"
@@ -267,7 +279,7 @@ const Navbar = () => {
         </div>
       </div>
       {meData?.user ? (
-        <form className="container pb-4 md:hidden" onSubmit={submitSearch}>
+        <form className="container hidden pb-3 md:hidden" onSubmit={submitSearch}>
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
