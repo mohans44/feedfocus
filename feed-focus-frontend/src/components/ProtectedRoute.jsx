@@ -9,11 +9,23 @@ const ProtectedRoute = ({ children }) => {
   const { data, isLoading } = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
-    retry: false,
+    retry: 1,
   });
 
   if (isLoading) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading session...</div>;
+    return (
+      <div className="container py-8">
+        <div className="mx-auto max-w-5xl space-y-4">
+          <div className="h-12 animate-pulse rounded-2xl bg-card/70" />
+          <div className="h-52 animate-pulse rounded-3xl bg-card/70" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="h-48 animate-pulse rounded-2xl bg-card/70" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!data?.user && !isAuthRoute) {

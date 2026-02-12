@@ -224,6 +224,7 @@ const Navbar = () => {
           <Button
             variant="ghost"
             size="icon"
+            type="button"
             aria-label="Toggle theme"
             onClick={toggleTheme}
           >
@@ -236,6 +237,7 @@ const Navbar = () => {
           <Button
             variant="ghost"
             size="icon"
+            type="button"
             aria-label="Bookmarks"
             onClick={() => navigate(meData?.user ? "/bookmarks" : "/auth")}
           >
@@ -245,6 +247,7 @@ const Navbar = () => {
             <Button
               variant="ghost"
               size="icon"
+              type="button"
               aria-label="Profile"
               onClick={() => navigate("/profile")}
             >
@@ -252,12 +255,24 @@ const Navbar = () => {
             </Button>
           ) : null}
           {!meData?.user ? (
-            <Button variant="outline" size="sm" onClick={() => navigate("/auth")}>
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => navigate("/auth")}
+            >
               Sign in
             </Button>
           ) : null}
         </div>
       </div>
+      {!meData?.user ? (
+        <div className="container pb-3 md:hidden">
+          <Button className="w-full" type="button" onClick={() => navigate("/auth")}>
+            Sign in
+          </Button>
+        </div>
+      ) : null}
       {meData?.user ? (
         <form className="container pb-4 md:hidden" onSubmit={submitSearch}>
           <div className="relative w-full">

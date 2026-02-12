@@ -36,7 +36,7 @@ const Auth = () => {
   const { data: meData } = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
-    retry: false,
+    retry: 1,
   });
 
   useEffect(() => {
@@ -78,6 +78,9 @@ const Auth = () => {
     if (!result.success) {
       setError(result.error || "Login failed");
       return;
+    }
+    if (result.data?.user) {
+      queryClient.setQueryData(["me"], { user: result.data.user });
     }
     await queryClient.invalidateQueries({ queryKey: ["me"] });
     navigate("/", { replace: true });
