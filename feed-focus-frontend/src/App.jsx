@@ -15,7 +15,14 @@ const App = () => {
     <Router>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/" element={<Home />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/feed" element={<Feed />} />
           <Route path="/search" element={<SearchResultsPage />} />
           <Route

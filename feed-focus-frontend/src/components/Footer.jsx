@@ -1,9 +1,10 @@
 const Footer = () => {
   return (
     <footer className="mt-8 border-t border-border/60 bg-background/80">
-      <div className="container flex flex-col items-center justify-between gap-2 py-3 text-sm text-muted-foreground sm:flex-row sm:py-4">
-        <p className="font-semibold tracking-wide text-foreground">feedfocus</p>
-        <p className="text-center sm:text-right">
+      <div className="container overflow-hidden py-3 text-center text-xs text-muted-foreground sm:py-4 sm:text-sm">
+        <p className="whitespace-nowrap">
+          <span className="font-semibold tracking-wide text-foreground">feedfocus</span>
+          {" · "}
           Developed by{" "}
           <a
             href="https://mohanseetha.vercel.app"

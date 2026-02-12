@@ -1,7 +1,7 @@
 import express from "express";
 import { authRequired } from "../middleware/auth.js";
 import { Article } from "../models/Article.js";
-import { enrichArticleTopics, preferenceScore } from "../utils/topics.js";
+import { enrichArticleTopics, normalizeTopic, preferenceScore } from "../utils/topics.js";
 
 const router = express.Router();
 
@@ -10,27 +10,38 @@ router.get("/for-you", authRequired, async (req, res) => {
     const { limit = 10 } = req.query;
     const parsedLimit = parseInt(String(limit), 10);
     const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 30) : 10;
-    const preferences = req.user.preferences || [];
+    const normalizedPreferences = Array.from(
+      new Set((req.user.preferences || []).map((item) => normalizeTopic(item)).filter(Boolean))
+    );
 
     const recentItems = await Article.find({})
       .sort({ publishedAt: -1 })
       .limit(250)
       .lean();
 
-    const ranked = recentItems
+    const rankedAll = recentItems
       .map((object) => {
         const enriched = enrichArticleTopics(object);
-        const score = preferenceScore(enriched, preferences);
+        const score = preferenceScore(enriched, normalizedPreferences);
         return {
           ...enriched,
           aiScore: Number(score.toFixed(3)),
           reason:
-            preferences.length > 0
+            normalizedPreferences.length > 0
               ? "Ranked by preference match + recency + content quality"
               : "Ranked by recency + content quality",
         };
       })
       .sort((a, b) => b.aiScore - a.aiScore);
+
+    const ranked =
+      normalizedPreferences.length > 0
+        ? rankedAll.filter(
+            (item) =>
+              normalizedPreferences.includes(item.primaryCategory) ||
+              (item.topics || []).some((topic) => normalizedPreferences.includes(topic))
+          )
+        : rankedAll;
 
     // Keep source diversity in top picks.
     const payload = [];
