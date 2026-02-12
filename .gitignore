@@ -1,6 +1,17 @@
 .idea/
 .DS_Store
 .vscode/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+coverage/
+dist/
+build/
+.env
+.env.*
+!.env.example
 
 # ==========================
 # React Frontend (feed-focus-frontend)
@@ -14,21 +25,33 @@
 /feed-focus-frontend/.env.development
 /feed-focus-frontend/.env.production
 /feed-focus-frontend/.env.test
-/feed-focus-frontend/.gitignore
-/feed-focus-frontend/package-lock.json
 
 # ==========================
-# Spring Boot Backend (feed-focus-backend)
+# Node Backend Legacy (feed-focus-backend)
 # ==========================
-/feed-focus-backend/.idea/
-/feed-focus-backend/target/
-/feed-focus-backend/.classpath
-/feed-focus-backend/.project
+/feed-focus-backend/node_modules/
 /feed-focus-backend/.env
 /feed-focus-backend/.env.local
-/feed-focus-backend/.mvn/
 /feed-focus-backend/build/
-/feed-focus-backend/mvnw
-/feed-focus-backend/mvnw.cmd
-/feed-focus-backend/.gitignore
-/feed-focus-backend/.gitattributes
+/feed-focus-backend/coverage/
+
+# ==========================
+# Node Backend (feed-focus-backend-node)
+# ==========================
+/feed-focus-backend-node/node_modules/
+/feed-focus-backend-node/.env
+/feed-focus-backend-node/.env.local
+/feed-focus-backend-node/.env.development
+/feed-focus-backend-node/.env.production
+/feed-focus-backend-node/coverage/
+/feed-focus-backend-node/.vercel/
+
+# ==========================
+# Crawler (feed-focus-crawler)
+# ==========================
+/feed-focus-crawler/node_modules/
+/feed-focus-crawler/.env
+/feed-focus-crawler/.env.local
+/feed-focus-crawler/.env.development
+/feed-focus-crawler/.env.production
+/feed-focus-crawler/coverage/

@@ -1,19 +1,12 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
-});
-
-api.interceptors.request.use((config) => {
-  const user = localStorage.getItem("user");
-  const token = user ? JSON.parse(user).token : null;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+  withCredentials: true,
+  timeout: 15000,
 });
 
 const handleRequest = async (request) => {
@@ -23,43 +16,58 @@ const handleRequest = async (request) => {
   } catch (err) {
     return {
       success: false,
-      error: err?.response?.data?.message || err.message || "Unknown error",
+      error: err?.response?.data?.error || err.message || "Unknown error",
     };
   }
 };
 
-export const getAllArticles = () =>
-  handleRequest(() => api.get("/api/articles")).then((res) => res.data);
-
-export const getArticlesByTopic = (topic) =>
-  handleRequest(() => api.get("/api/articles", { params: { topic } })).then(
-    (res) => res.data
+export const getArticles = (params = {}) =>
+  handleRequest(() => api.get("/api/articles", { params })).then((res) =>
+    res.success ? res.data : { items: [], nextCursor: null, error: res.error }
   );
 
-export const getArticleById = (id) =>
-  handleRequest(() => api.get(`/api/articles/${id}`));
-
-export const getUserArticles = () =>
-  handleRequest(() => api.get("/api/users/recommended-articles")).then(
-    (res) => res.data
+export const getForYou = (params = {}) =>
+  handleRequest(() => api.get("/api/recommendations/for-you", { params })).then(
+    (res) => (res.success ? res.data : { items: [], error: res.error })
   );
 
-export const addBookmark = (article) =>
-  handleRequest(() => api.patch("/api/users/add-bookmark", article));
+export const loginUser = (credentials) =>
+  handleRequest(() => api.post("/api/auth/login", credentials));
 
-export const removeBookmark = (article) =>
-  handleRequest(() =>
-    api.delete("/api/users/remove-bookmark", { data: article })
+export const registerUser = (userData) =>
+  handleRequest(() => api.post("/api/auth/register", userData));
+
+export const logoutUser = () => handleRequest(() => api.post("/api/auth/logout"));
+
+export const getMe = () =>
+  handleRequest(() => api.get("/api/users/me")).then((res) =>
+    res.success ? res.data : null
   );
 
 export const updatePreferences = (preferences) =>
-  handleRequest(() => api.put("/api/users/update-preferences", preferences));
+  handleRequest(() => api.put("/api/users/preferences", { preferences }));
 
-export const loginUser = (credentials) =>
-  handleRequest(() => api.post("/api/users/login", credentials));
+export const updateProfile = (payload) =>
+  handleRequest(() => api.put("/api/users/me", payload));
 
-export const registerUser = (userData) =>
-  handleRequest(() => api.post("/api/users/register", userData));
+export const getBookmarks = () =>
+  handleRequest(() => api.get("/api/users/bookmarks")).then((res) =>
+    res.success ? res.data : { items: [] }
+  );
 
-export const getUserProfile = () =>
-  handleRequest(() => api.get("/api/users/profile")).then((res) => res.data);
+export const addBookmark = (articleId) =>
+  handleRequest(() => api.post("/api/users/bookmarks", { articleId }));
+
+export const removeBookmark = (articleId) =>
+  handleRequest(() => api.delete(`/api/users/bookmarks/${articleId}`));
+
+export const getAiSummary = (articleId, { force = false } = {}) =>
+  handleRequest(() =>
+    api.get(`/api/articles/${articleId}/ai-summary`, {
+      params: force ? { force: 1 } : undefined,
+    })
+  ).then((res) =>
+    res.success
+      ? res.data
+      : { articleId, summary: "", keyPoints: [], error: res.error || "Failed to load summary" }
+  );

@@ -1,35 +1,22 @@
-import { Box, Typography, Container } from "@mui/material";
-
-const Footer = () => (
-  <Box
-    component="footer"
-    sx={{
-      py: 3,
-      mt: 5,
-      bgcolor: (theme) => theme.palette.background.footer,
-      color: (theme) => theme.palette.text.footer,
-      borderTop: "1px solid",
-      borderColor: (theme) => theme.palette.divider,
-      width: "100%",
-    }}
-  >
-    <Container maxWidth="md" sx={{ textAlign: "center" }}>
-      <Typography variant="body2" sx={{ fontSize: "0.9rem", fontWeight: 500 }}>
-        © 2025 <strong>FeedFocus</strong> — Your personalized news digest.
-      </Typography>
-      <Typography
-        variant="caption"
-        sx={{
-          fontSize: "0.75rem",
-          opacity: 0.7,
-          mt: 0.5,
-          display: "block",
-        }}
-      >
-        Built with 💜 for curious minds.
-      </Typography>
-    </Container>
-  </Box>
-);
+const Footer = () => {
+  return (
+    <footer className="mt-8 border-t border-border/60 bg-background/80">
+      <div className="container flex flex-col items-center justify-between gap-2 py-3 text-sm text-muted-foreground sm:flex-row sm:py-4">
+        <p className="font-semibold tracking-wide text-foreground">feedfocus</p>
+        <p className="text-center sm:text-right">
+          Developed by{" "}
+          <a
+            href="https://mohanseetha.vercel.app"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-foreground underline-offset-4 hover:underline"
+          >
+            Mohan
+          </a>
+        </p>
+      </div>
+    </footer>
+  );
+};
 
 export default Footer;

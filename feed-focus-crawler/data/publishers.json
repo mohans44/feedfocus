@@ -1,0 +1,451 @@
+[
+  {
+    "name": "BBC News",
+    "homepage": "https://www.bbc.com/news",
+    "feeds": [
+      { "url": "http://feeds.bbci.co.uk/news/rss.xml", "topic": "world" },
+      { "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "topic": "world" },
+      {
+        "url": "http://feeds.bbci.co.uk/news/business/rss.xml",
+        "topic": "business"
+      },
+      {
+        "url": "http://feeds.bbci.co.uk/news/technology/rss.xml",
+        "topic": "technology"
+      },
+      {
+        "url": "http://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+        "topic": "science"
+      },
+      {
+        "url": "http://feeds.bbci.co.uk/news/health/rss.xml",
+        "topic": "health"
+      },
+      {
+        "url": "http://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+        "topic": "entertainment"
+      },
+      { "url": "http://feeds.bbci.co.uk/sport/rss.xml", "topic": "sports" },
+      {
+        "url": "http://feeds.bbci.co.uk/news/world/asia/india/rss.xml",
+        "topic": "india"
+      }
+    ],
+    "allowedPaths": ["/news/", "/sport/"]
+  },
+  {
+    "name": "The Guardian",
+    "homepage": "https://www.theguardian.com/international",
+    "feeds": [
+      { "url": "https://www.theguardian.com/world/rss", "topic": "world" },
+      {
+        "url": "https://www.theguardian.com/business/rss",
+        "topic": "business"
+      },
+      {
+        "url": "https://www.theguardian.com/technology/rss",
+        "topic": "technology"
+      },
+      { "url": "https://www.theguardian.com/science/rss", "topic": "science" },
+      { "url": "https://www.theguardian.com/sport/rss", "topic": "sports" },
+      {
+        "url": "https://www.theguardian.com/culture/rss",
+        "topic": "entertainment"
+      },
+      {
+        "url": "https://www.theguardian.com/lifeandstyle/fashion/rss",
+        "topic": "fashion"
+      },
+      { "url": "https://www.theguardian.com/travel/rss", "topic": "travel" },
+      { "url": "https://www.theguardian.com/food/rss", "topic": "food" }
+    ],
+    "allowedPaths": [
+      "/202",
+      "/world/",
+      "/business/",
+      "/technology/",
+      "/science/",
+      "/sport/",
+      "/culture/",
+      "/travel/",
+      "/food/"
+    ]
+  },
+  {
+    "name": "Reuters",
+    "homepage": "https://www.reuters.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.reuters.com/world/rss", "topic": "world" },
+      { "url": "https://www.reuters.com/business/rss", "topic": "business" },
+      { "url": "https://www.reuters.com/technology/rss", "topic": "technology" }
+    ],
+    "sitemaps": [
+      "https://www.reuters.com/sitemap.xml",
+      "https://www.reuters.com/arc/outboundfeeds/sitemap-index/?outputType=xml"
+    ],
+    "allowedPaths": [
+      "/world/",
+      "/business/",
+      "/technology/",
+      "/markets/",
+      "/lifestyle/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "Associated Press",
+    "homepage": "https://apnews.com",
+    "feeds": [
+      {
+        "url": "https://apnews.com/hub/ap-top-news?output=amp",
+        "topic": "world"
+      }
+    ],
+    "allowedPaths": ["/article/"]
+  },
+  {
+    "name": "Al Jazeera",
+    "homepage": "https://www.aljazeera.com",
+    "feeds": [
+      { "url": "https://www.aljazeera.com/xml/rss/all.xml", "topic": "world" }
+    ],
+    "allowedPaths": [
+      "/news/",
+      "/features/",
+      "/economy/",
+      "/politics/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "NPR",
+    "homepage": "https://www.npr.org",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://feeds.npr.org/1001/rss.xml", "topic": "world" },
+      { "url": "https://feeds.npr.org/1006/rss.xml", "topic": "business" },
+      { "url": "https://feeds.npr.org/1019/rss.xml", "topic": "technology" },
+      { "url": "https://feeds.npr.org/103537970/rss.xml", "topic": "health" },
+      { "url": "https://feeds.npr.org/1008/rss.xml", "topic": "sports" }
+    ],
+    "sitemaps": ["https://www.npr.org/sitemaps/sitemap-index.xml"],
+    "allowedPaths": ["/202", "/sections/", "/2026/"]
+  },
+  {
+    "name": "CNBC",
+    "homepage": "https://www.cnbc.com/world/",
+    "feeds": [
+      {
+        "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "topic": "world"
+      },
+      {
+        "url": "https://www.cnbc.com/id/10001147/device/rss/rss.html",
+        "topic": "business"
+      },
+      {
+        "url": "https://www.cnbc.com/id/19854910/device/rss/rss.html",
+        "topic": "technology"
+      }
+    ],
+    "allowedPaths": [
+      "/202",
+      "/world/",
+      "/finance/",
+      "/technology/",
+      "/markets/"
+    ]
+  },
+  {
+    "name": "The Hindu",
+    "homepage": "https://www.thehindu.com",
+    "feeds": [
+      {
+        "url": "https://www.thehindu.com/news/national/feeder/default.rss",
+        "topic": "india"
+      },
+      {
+        "url": "https://www.thehindu.com/news/international/feeder/default.rss",
+        "topic": "world"
+      },
+      {
+        "url": "https://www.thehindu.com/business/feeder/default.rss",
+        "topic": "business"
+      },
+      {
+        "url": "https://www.thehindu.com/sci-tech/technology/feeder/default.rss",
+        "topic": "technology"
+      },
+      {
+        "url": "https://www.thehindu.com/entertainment/feeder/default.rss",
+        "topic": "entertainment"
+      },
+      {
+        "url": "https://www.thehindu.com/sport/feeder/default.rss",
+        "topic": "sports"
+      },
+      {
+        "url": "https://www.thehindu.com/sci-tech/science/feeder/default.rss",
+        "topic": "science"
+      },
+      {
+        "url": "https://www.thehindu.com/life-and-style/fashion/feeder/default.rss",
+        "topic": "fashion"
+      },
+      {
+        "url": "https://www.thehindu.com/life-and-style/food/feeder/default.rss",
+        "topic": "food"
+      }
+    ],
+    "allowedPaths": [
+      "/news/",
+      "/business/",
+      "/sci-tech/",
+      "/sport/",
+      "/entertainment/",
+      "/life-and-style/"
+    ]
+  },
+  {
+    "name": "The Indian Express",
+    "homepage": "https://indianexpress.com",
+    "feeds": [
+      { "url": "https://indianexpress.com/feed/", "topic": "india" },
+      {
+        "url": "https://indianexpress.com/section/india/feed/",
+        "topic": "india"
+      },
+      {
+        "url": "https://indianexpress.com/section/world/feed/",
+        "topic": "world"
+      },
+      {
+        "url": "https://indianexpress.com/section/technology/feed/",
+        "topic": "technology"
+      },
+      {
+        "url": "https://indianexpress.com/section/sports/feed/",
+        "topic": "sports"
+      },
+      {
+        "url": "https://indianexpress.com/section/explained/feed/",
+        "topic": "science"
+      },
+      {
+        "url": "https://indianexpress.com/section/lifestyle/fashion/feed/",
+        "topic": "fashion"
+      },
+      {
+        "url": "https://indianexpress.com/section/lifestyle/food-wine/feed/",
+        "topic": "food"
+      },
+      {
+        "url": "https://indianexpress.com/section/lifestyle/destination-of-the-week/feed/",
+        "topic": "travel"
+      }
+    ],
+    "allowedPaths": [
+      "/article/",
+      "/india/",
+      "/world/",
+      "/business/",
+      "/technology/",
+      "/sports/",
+      "/lifestyle/"
+    ]
+  },
+  {
+    "name": "Hindustan Times",
+    "homepage": "https://www.hindustantimes.com",
+    "feeds": [
+      {
+        "url": "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml",
+        "topic": "india"
+      },
+      {
+        "url": "https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml",
+        "topic": "world"
+      },
+      {
+        "url": "https://www.hindustantimes.com/feeds/rss/business/rssfeed.xml",
+        "topic": "business"
+      },
+      {
+        "url": "https://www.hindustantimes.com/feeds/rss/technology/rssfeed.xml",
+        "topic": "technology"
+      },
+      {
+        "url": "https://www.hindustantimes.com/feeds/rss/entertainment/rssfeed.xml",
+        "topic": "entertainment"
+      },
+      {
+        "url": "https://www.hindustantimes.com/feeds/rss/sports/rssfeed.xml",
+        "topic": "sports"
+      },
+      {
+        "url": "https://www.hindustantimes.com/feeds/rss/health/rssfeed.xml",
+        "topic": "health"
+      },
+      {
+        "url": "https://www.hindustantimes.com/feeds/rss/travel/rssfeed.xml",
+        "topic": "travel"
+      }
+    ],
+    "allowedPaths": [
+      "/india-news/",
+      "/world-news/",
+      "/business/",
+      "/technology/",
+      "/entertainment/",
+      "/sports/",
+      "/health/",
+      "/travel/"
+    ]
+  },
+  {
+    "name": "NDTV",
+    "homepage": "https://www.ndtv.com",
+    "feeds": [
+      {
+        "url": "https://feeds.feedburner.com/ndtvnews-top-stories",
+        "topic": "india"
+      }
+    ],
+    "allowedPaths": [
+      "/india-news/",
+      "/world-news/",
+      "/business/",
+      "/science/",
+      "/sports/",
+      "/entertainment/"
+    ]
+  },
+  {
+    "name": "India Today",
+    "homepage": "https://www.indiatoday.in",
+    "feeds": [
+      { "url": "https://www.indiatoday.in/rss/home", "topic": "india" }
+    ],
+    "allowedPaths": [
+      "/india/",
+      "/world/",
+      "/business/",
+      "/technology/",
+      "/sports/",
+      "/science/",
+      "/lifestyle/"
+    ]
+  },
+  {
+    "name": "Mint",
+    "homepage": "https://www.livemint.com",
+    "feeds": [
+      { "url": "https://www.livemint.com/rss/news", "topic": "business" },
+      {
+        "url": "https://www.livemint.com/rss/technology",
+        "topic": "technology"
+      },
+      { "url": "https://www.livemint.com/rss/science", "topic": "science" }
+    ],
+    "allowedPaths": [
+      "/news/",
+      "/market/",
+      "/companies/",
+      "/technology/",
+      "/science/"
+    ]
+  },
+  {
+    "name": "WHO Newsroom",
+    "homepage": "https://www.who.int/news-room",
+    "sitemaps": ["https://www.who.int/sitemaps/sitemap.xml"],
+    "allowedPaths": ["/news-room/", "/health-topics/"]
+  },
+  {
+    "name": "Medical News Today",
+    "homepage": "https://www.medicalnewstoday.com",
+    "sitemaps": ["https://www.medicalnewstoday.com/sitemap.xml"],
+    "allowedPaths": ["/articles/", "/health-news/"]
+  },
+  {
+    "name": "Healthline",
+    "homepage": "https://www.healthline.com",
+    "sitemaps": ["https://www.healthline.com/sitemap.xml"],
+    "allowedPaths": ["/health-news/", "/health/", "/nutrition/"]
+  },
+  {
+    "name": "ScienceDaily",
+    "homepage": "https://www.sciencedaily.com",
+    "feeds": [
+      {
+        "url": "https://www.sciencedaily.com/rss/top/science.xml",
+        "topic": "science"
+      },
+      {
+        "url": "https://www.sciencedaily.com/rss/top/health.xml",
+        "topic": "health"
+      }
+    ],
+    "allowedPaths": ["/releases/"]
+  },
+  {
+    "name": "Nature News",
+    "homepage": "https://www.nature.com/news",
+    "sitemaps": ["https://www.nature.com/sitemap.xml"],
+    "allowedPaths": ["/articles/", "/news/"]
+  },
+  {
+    "name": "NASA News",
+    "homepage": "https://www.nasa.gov/news/",
+    "feeds": [
+      {
+        "url": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+        "topic": "science"
+      }
+    ],
+    "allowedPaths": ["/news-release/", "/missions/", "/science/"]
+  },
+  {
+    "name": "Food & Wine",
+    "homepage": "https://www.foodandwine.com",
+    "sitemaps": ["https://www.foodandwine.com/sitemaps.xml"],
+    "allowedPaths": ["/news/", "/recipes/", "/travel/", "/restaurants/"]
+  },
+  {
+    "name": "Serious Eats",
+    "homepage": "https://www.seriouseats.com",
+    "sitemaps": ["https://www.seriouseats.com/sitemaps.xml"],
+    "allowedPaths": ["/recipes/", "/guides/", "/news/"]
+  },
+  {
+    "name": "Vogue",
+    "homepage": "https://www.vogue.com",
+    "sitemaps": ["https://www.vogue.com/sitemap.xml"],
+    "allowedPaths": ["/fashion/", "/article/", "/beauty/"]
+  },
+  {
+    "name": "Harper's Bazaar",
+    "homepage": "https://www.harpersbazaar.com",
+    "sitemaps": ["https://www.harpersbazaar.com/sitemap.xml"],
+    "allowedPaths": ["/fashion/", "/beauty/", "/culture/"]
+  },
+  {
+    "name": "Travel + Leisure",
+    "homepage": "https://www.travelandleisure.com",
+    "sitemaps": ["https://www.travelandleisure.com/sitemaps.xml"],
+    "allowedPaths": ["/travel-news/", "/trip-ideas/", "/destinations/"]
+  },
+  {
+    "name": "Lonely Planet",
+    "homepage": "https://www.lonelyplanet.com",
+    "sitemaps": ["https://www.lonelyplanet.com/sitemap.xml"],
+    "allowedPaths": ["/news/", "/articles/", "/destinations/"]
+  },
+  {
+    "name": "ANI News",
+    "homepage": "https://www.aninews.in",
+    "feeds": [{ "url": "https://www.aninews.in/rss/", "topic": "india" }],
+    "allowedPaths": ["/news/"]
+  }
+]

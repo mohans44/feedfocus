@@ -1,386 +1,197 @@
-import { useState } from "react";
-import {
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Paper,
-  CircularProgress,
-  Snackbar,
-  Alert,
-  Chip,
-  Tabs,
-  Tab,
-  Grid,
-  useTheme,
-  Divider,
-} from "@mui/material";
-import { useDispatch } from "react-redux";
-import { login } from "../redux/userSlice";
-import { loginUser, registerUser } from "../utils/api";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Button } from "../components/ui/button";
+import { Card } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { getMe, loginUser, registerUser } from "../utils/api";
 
-const preferencesList = [
-  "India",
-  "US",
-  "UK",
-  "Technology",
-  "Politics",
-  "Entertainment",
-  "Sports",
-  "Business",
-  "Science",
-  "Health",
-  "Travel",
-  "Food",
-  "Fashion",
-  "Automotive",
-  "History",
+const PREFERENCE_OPTIONS = [
+  "india",
+  "world",
+  "technology",
+  "business",
+  "science",
+  "health",
+  "sports",
+  "entertainment",
+  "food",
+  "fashion",
+  "travel",
 ];
 
 const Auth = () => {
-  const [tab, setTab] = useState("login");
-  const [form, setForm] = useState({ username: "", email: "", password: "" });
-  const [selectedPreferences, setSelectedPreferences] = useState([]);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    identifier: "",
+    username: "",
+    password: "",
+    confirmPassword: "",
+    preferences: [],
+  });
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    type: "error",
+  const [mode, setMode] = useState("login");
+  const { data: meData } = useQuery({
+    queryKey: ["me"],
+    queryFn: getMe,
+    retry: false,
   });
 
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const theme = useTheme();
+  useEffect(() => {
+    if (meData?.user) {
+      navigate("/", { replace: true });
+    }
+  }, [meData, navigate]);
 
-  const handleTabChange = (_, newValue) => {
-    setTab(newValue);
-    setForm({ username: "", email: "", password: "" });
-    setSelectedPreferences([]);
+  const onChange = (event) => {
+    setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }));
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const togglePreference = (pref) => {
-    const lower = pref.toLowerCase();
-    setSelectedPreferences((prev) =>
-      prev.includes(lower) ? prev.filter((p) => p !== lower) : [...prev, lower]
-    );
-  };
-
-  const handleSnackbarClose = () => setSnackbar((s) => ({ ...s, open: false }));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const { username, email, password } = form;
-
-    if (tab === "login") {
-      try {
-        const result = await loginUser({ username, password });
-        if (!result.success) throw new Error(result.error || "Login failed");
-        dispatch(login({ username, token: result.data.token }));
-        setSnackbar({
-          open: true,
-          message: "Login successful!",
-          type: "success",
-        });
-        navigate("/");
-      } catch (error) {
-        setSnackbar({
-          open: true,
-          message: "Username or password is incorrect.",
-          type: "error",
-        });
-      } finally {
-        setLoading(false);
+  const onSubmit = async (event) => {
+    event.preventDefault();
+    setError("");
+    if (mode === "register") {
+      if (!form.username.trim()) {
+        setError("Username is required");
+        return;
       }
-    } else {
-      try {
-        if (selectedPreferences.length < 5)
-          throw new Error("Please select at least 5 preferences.");
-        const reg = await registerUser({
-          username,
-          email,
-          password,
-          preferences: selectedPreferences,
-        });
-        if (!reg.success) throw new Error(reg.error || "Registration failed");
-        const result = await loginUser({ username, password });
-        if (!result.success) throw new Error("Login failed after registration");
-        dispatch(login({ username, token: result.data.token }));
-        setSnackbar({
-          open: true,
-          message: "Registration successful!",
-          type: "success",
-        });
-        navigate("/");
-      } catch (error) {
-        setSnackbar({
-          open: true,
-          message: "username or email already exists.",
-          type: "error",
-        });
-      } finally {
-        setLoading(false);
+      if (form.password !== form.confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+      if (form.preferences.length < 4) {
+        setError("Select at least 4 preferences");
+        return;
       }
     }
+    setLoading(true);
+    const result = mode === "login"
+      ? await loginUser({ identifier: form.identifier, password: form.password })
+      : await registerUser({
+          username: form.username,
+          password: form.password,
+          preferences: form.preferences,
+        });
+    setLoading(false);
+    if (!result.success) {
+      setError(result.error || "Login failed");
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["me"] });
+    navigate("/", { replace: true });
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: theme.palette.background.default,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        p: 2,
-      }}
-    >
-      <Paper
-        elevation={4}
-        sx={{
-          width: { xs: "100%", sm: 400 },
-          borderRadius: 3,
-          p: { xs: 2, sm: 4 },
-          bgcolor: theme.palette.background.paper,
-          boxShadow: `0 4px 24px 0 ${theme.palette.primary.main}18`,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-        }}
-      >
-        <Tabs
-          value={tab}
-          onChange={handleTabChange}
-          variant="fullWidth"
-          sx={{
-            mb: 2,
-            ".MuiTab-root": {
-              fontWeight: 600,
-              fontSize: 16,
-              color: theme.palette.text.secondary,
-            },
-            ".Mui-selected": {
-              color: theme.palette.primary.main,
-            },
-            ".MuiTabs-indicator": {
-              backgroundColor: theme.palette.primary.main,
-              height: 3,
-              borderRadius: 2,
-            },
-          }}
-        >
-          <Tab label="Login" value="login" />
-          <Tab label="Register" value="register" />
-        </Tabs>
-        <Divider sx={{ width: "100%", mb: 2 }} />
-        <form onSubmit={handleSubmit} style={{ width: "100%" }}>
-          <TextField
-            name="username"
-            label="Username"
-            variant="outlined"
-            fullWidth
-            required
-            margin="normal"
-            value={form.username}
-            onChange={handleChange}
-            autoComplete="username"
-            sx={{
-              "& .MuiInputBase-root": {
-                borderRadius: 1,
-                backgroundColor: theme.palette.background.paper,
-              },
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: theme.palette.divider,
-              },
-              "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor: theme.palette.primary.main,
-              },
-              "& .MuiInputLabel-root": {
-                color: theme.palette.text.secondary,
-              },
-            }}
-            InputLabelProps={{
-              sx: { color: theme.palette.text.secondary },
-            }}
-          />
-          {tab === "register" && (
-            <TextField
-              name="email"
-              label="Email"
-              type="email"
-              variant="outlined"
-              fullWidth
-              required
-              margin="normal"
-              value={form.email}
-              onChange={handleChange}
-              autoComplete="email"
-              sx={{
-                "& .MuiInputBase-root": {
-                  borderRadius: 1,
-                  backgroundColor: theme.palette.background.paper,
-                },
-                "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: theme.palette.divider,
-                },
-                "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: theme.palette.primary.main,
-                },
-                "& .MuiInputLabel-root": {
-                  color: theme.palette.text.secondary,
-                },
-              }}
-              InputLabelProps={{
-                sx: { color: theme.palette.text.secondary },
-              }}
-            />
-          )}
-          <TextField
-            name="password"
-            label="Password"
-            type="password"
-            variant="outlined"
-            fullWidth
-            required
-            margin="normal"
-            value={form.password}
-            onChange={handleChange}
-            autoComplete={tab === "login" ? "current-password" : "new-password"}
-            sx={{
-              "& .MuiInputBase-root": {
-                borderRadius: 1,
-                backgroundColor: theme.palette.background.paper,
-              },
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: theme.palette.divider,
-              },
-              "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor: theme.palette.primary.main,
-              },
-              "& .MuiInputLabel-root": {
-                color: theme.palette.text.secondary,
-              },
-            }}
-            InputLabelProps={{
-              sx: { color: theme.palette.text.secondary },
-            }}
-          />
-          {tab === "register" && (
-            <>
-              <Typography
-                variant="subtitle1"
-                gutterBottom
-                sx={{
-                  fontWeight: 600,
-                  color: theme.palette.primary.main,
-                  mb: 1,
-                  textAlign: "center",
-                }}
-              >
-                Select at least 5 preferences
-              </Typography>
-              <Grid container spacing={1} mb={2} justifyContent="center">
-                {preferencesList.map((pref) => {
-                  const selected = selectedPreferences.includes(
-                    pref.toLowerCase()
-                  );
-                  return (
-                    <Grid item key={pref}>
-                      <Chip
-                        label={pref}
-                        clickable
-                        variant={selected ? "filled" : "outlined"}
-                        color={selected ? "primary" : "default"}
-                        onClick={() => togglePreference(pref)}
-                        sx={{
-                          fontWeight: 600,
-                          fontSize: 15,
-                          px: 1.5,
-                          py: 0.5,
-                          borderRadius: 3,
-                          borderWidth: 2,
-                          borderColor: theme.palette.primary.main,
-                          transition: "all 0.2s",
-                          boxShadow: selected
-                            ? `0 2px 8px 0 ${theme.palette.primary.main}22`
-                            : "none",
-                          "&:hover": {
-                            backgroundColor: selected
-                              ? theme.palette.primary.dark
-                              : theme.palette.action.hover,
-                            color: theme.palette.primary.main,
-                          },
-                        }}
-                      />
-                    </Grid>
-                  );
-                })}
-              </Grid>
-              <Typography
-                variant="caption"
-                color={
-                  selectedPreferences.length < 5 ? "error" : "success.main"
-                }
-                sx={{ display: "block", textAlign: "center", mb: 1 }}
-              >
-                {selectedPreferences.length < 5
-                  ? "Please select at least 5 preferences to continue."
-                  : "Ready to register!"}
-              </Typography>
-            </>
-          )}
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            disabled={
-              loading || (tab === "register" && selectedPreferences.length < 5)
-            }
-            sx={{
-              mt: 2,
-              fontWeight: "bold",
-              textTransform: "none",
-              fontSize: 17,
-              py: 1.2,
-              borderRadius: 3,
-              boxShadow: `0 2px 8px 0 ${theme.palette.primary.main}22`,
-              background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-              "&:hover": {
-                background: `linear-gradient(90deg, ${theme.palette.primary.dark} 0%, ${theme.palette.secondary.dark} 100%)`,
-              },
-            }}
-          >
-            {loading ? (
-              <CircularProgress size={24} sx={{ color: "#fff" }} />
-            ) : tab === "login" ? (
-              "Login"
+    <div className="mx-auto flex min-h-[70vh] max-w-4xl flex-col items-center justify-center">
+      <Card className="glass top-sheen w-full max-w-lg">
+        <form className="space-y-6" onSubmit={onSubmit}>
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-3xl">
+              {mode === "login" ? "Welcome back" : "Create your account"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              One secure login keeps your feed tuned for 30 days.
+            </p>
+          </div>
+          <div className="space-y-4">
+            {mode === "login" ? (
+              <Input
+                name="identifier"
+                placeholder="Username or email"
+                value={form.identifier}
+                onChange={onChange}
+              />
             ) : (
-              "Register"
+              <Input
+                name="username"
+                placeholder="Username"
+                value={form.username}
+                onChange={onChange}
+              />
             )}
-          </Button>
+            <Input
+              name="password"
+              placeholder="Password"
+              type="password"
+              value={form.password}
+              onChange={onChange}
+            />
+            {mode === "register" ? (
+              <>
+                <Input
+                  name="confirmPassword"
+                  placeholder="Confirm password"
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={onChange}
+                />
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Select preferences (min 4)</p>
+                  <div className="flex flex-wrap gap-2">
+                    {PREFERENCE_OPTIONS.map((item) => {
+                      const selected = form.preferences.includes(item);
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              preferences: selected
+                                ? prev.preferences.filter((pref) => pref !== item)
+                                : [...prev.preferences, item],
+                            }))
+                          }
+                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                            selected
+                              ? "border-primary/60 bg-primary text-primary-foreground"
+                              : "border-border/80 bg-background text-foreground hover:bg-muted"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Selected: {form.preferences.length}</p>
+                </div>
+              </>
+            ) : null}
+            {error ? (
+              <p className="text-xs text-red-400">{error}</p>
+            ) : null}
+            <Button className="w-full" type="submit" disabled={loading}>
+              {loading
+                ? "Submitting..."
+                : mode === "login"
+                ? "Sign in"
+                : "Create account"}
+            </Button>
+          </div>
+          <div className="text-center text-sm text-muted-foreground">
+            {mode === "login" ? (
+              <button
+                type="button"
+                className="text-foreground underline underline-offset-4"
+                onClick={() => setMode("register")}
+              >
+                New here? Create an account.
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="text-foreground underline underline-offset-4"
+                onClick={() => setMode("login")}
+              >
+                Already have an account? Sign in.
+              </button>
+            )}
+          </div>
         </form>
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={4000}
-          onClose={handleSnackbarClose}
-          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-        >
-          <Alert
-            severity={snackbar.type}
-            onClose={handleSnackbarClose}
-            sx={{ width: "100%" }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </Paper>
-    </Box>
+      </Card>
+    </div>
   );
 };
 

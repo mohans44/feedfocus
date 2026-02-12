@@ -1,42 +1,76 @@
 # Feed Focus
 
-Feed Focus is a modern news aggregation platform with a modular architecture:
+Feed Focus is a modern news platform with:
 
-- **Frontend**: Built with React and Material UI for a responsive, personalized news experience. Features include user authentication (JWT), bookmarks, topic filtering, dark/light mode, and profile management.
-- **Backend**: Powered by Spring Boot and MongoDB, providing secure user management, RSS feed aggregation, article storage, and personalized recommendations.
+- `feed-focus-frontend`: React + Vite + Tailwind + shadcn-style UI
+- `feed-focus-backend-node`: Node + Express + MongoDB API (httpOnly cookie auth, 30-day session)
+- `feed-focus-crawler`: crawler worker that ingests trusted publisher articles into MongoDB (publisher-driven feeds/sitemaps)
 
-![Demo](assets/demo.gif)
+`feed-focus-backend` (Spring Boot) is retained as the legacy implementation.
 
-## Getting Started
+## Highlights
 
-1.  **Clone the repository**:
-    ```
-    git clone [https://github.com/mohanseetha/feed-focus.git](https://github.com/mohanseetha/feed-focus.git)
-    ```
+- Category feed + AI-powered "For You"
+- Bookmarking + AI summary per article
+- Username-based signup with required preferences (minimum 4)
+- Profile management for password and preferences
+- Location-based weather chip in navbar (after login and location permission)
 
-### Backend Setup
+## Local Setup
 
-1.  Navigate to the backend directory:
-    ```
-    cd feed-focus/feed-focus-backend
-    ```
-2.  Configure your MongoDB connection in `src/main/resources/application.properties`.
-3.  Start the backend application using Maven or Gradle.
+### 1) Start MongoDB
 
-### Frontend Setup
+Run MongoDB locally (default URI usually `mongodb://127.0.0.1:27017/feedfocus`).
 
-1.  Navigate to the frontend directory:
-    ```
-    cd feed-focus/feed-focus-frontend
-    ```
-2.  Install dependencies:
-    ```
-    npm install
-    ```
-3.  Set your backend API URL in a `.env` file (e.g., `VITE_API_URL=http://localhost:8080`).
-4.  Start the frontend development server:
-    ```
-    npm run dev
-    ```
+### 2) Start API
 
-For full setup and feature details, refer to the individual `README.md` files in the `feed-focus-backend` and `feed-focus-frontend` folders.
+```bash
+cd /Users/mohansai/Developer/feedfocus-v2/feed-focus-backend-node
+cp .env.example .env
+npm install
+npm run dev
+```
+
+### 3) Start frontend
+
+```bash
+cd /Users/mohansai/Developer/feedfocus-v2/feed-focus-frontend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+### 4) Run crawler manually
+
+```bash
+cd /Users/mohansai/Developer/feedfocus-v2/feed-focus-crawler
+cp .env.example .env
+npm install
+npm run crawl
+```
+
+## Frontend Environment
+
+In `feed-focus-frontend/.env`:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+## API Notes
+
+- Signup expects: `username`, `password`, `preferences` (min 4)
+- Login accepts either `username` or `email` via `identifier`
+- Session auth uses secure cookies (`httpOnly`)
+- Main APIs:
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+  - `GET /api/users/me`
+  - `GET /api/articles`
+  - `GET /api/recommendations/for-you`
+
+## Deployment
+
+- Frontend: Vercel (or any static host)
+- API: Vercel (`feed-focus-backend-node/vercel.json` included)
+- Crawler: GitHub Actions (`.github/workflows/crawl.yml`) with `MONGO_URI` repo secret
