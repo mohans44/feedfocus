@@ -113,6 +113,7 @@ const Home = () => {
   const [aiLoadingId, setAiLoadingId] = useState(null);
   const [aiSummaryById, setAiSummaryById] = useState({});
   const [activeSummaryArticle, setActiveSummaryArticle] = useState(null);
+  const [categorySwitching, setCategorySwitching] = useState(false);
 
   const [extraItems, setExtraItems] = useState([]);
   const [paginationCursor, setPaginationCursor] = useState(null);
@@ -139,7 +140,6 @@ const Home = () => {
     queryKey: ["for-you", search, initialStoriesLimit],
     queryFn: () => getForYou({ limit: initialStoriesLimit }),
     enabled: Boolean(meData?.user) && selectedTopic === "for-you",
-    placeholderData: (previous) => previous,
   });
 
   const { data: topData, isFetching: articlesFetching } = useQuery({
@@ -151,7 +151,6 @@ const Home = () => {
         search: search || undefined,
       }),
     enabled: selectedTopic !== "for-you" || !meData?.user,
-    placeholderData: (previous) => previous,
   });
 
   const isActiveForYou = selectedTopic === "for-you" && Boolean(meData?.user);
@@ -179,9 +178,11 @@ const Home = () => {
     if (meData?.user) return items;
     return items.slice(0, 12);
   }, [stories, meData?.user]);
-  const showInitialLoading = isCategoryLoading && !stories.length;
+  const showInitialLoading =
+    categorySwitching || (isCategoryLoading && !stories.length);
 
   useEffect(() => {
+    setCategorySwitching(true);
     setCarouselIndex(0);
     setAiSummaryById({});
     setAiLoadingId(null);
@@ -192,6 +193,12 @@ const Home = () => {
     setLoadingMore(false);
     setAutoLazyLoad(false);
   }, [selectedTopic, search]);
+
+  useEffect(() => {
+    if (!isCategoryLoading) {
+      setCategorySwitching(false);
+    }
+  }, [isCategoryLoading]);
 
   useEffect(() => {
     if (isActiveForYou) {
@@ -311,12 +318,6 @@ const Home = () => {
       ) : null}
 
       <section className="space-y-2 sm:space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base sm:text-2xl">Categories</h2>
-          <span className="hidden text-sm text-muted-foreground sm:inline">
-            Topic-aware feed
-          </span>
-        </div>
         <div className="scrollbar-none flex gap-2 overflow-x-auto pb-1.5 sm:gap-3 sm:pb-2">
           {categories.map((category) => (
             <button
@@ -328,6 +329,7 @@ const Home = () => {
                   : "border-border/90 bg-card/70 text-foreground hover:bg-muted/70"
               }`}
               onClick={() => {
+                setCategorySwitching(true);
                 const next = new URLSearchParams(searchParams);
                 if (category.value === "for-you") next.delete("topic");
                 else next.set("topic", category.value);
@@ -361,7 +363,7 @@ const Home = () => {
           </p>
         ) : null}
 
-        {carouselStories.length ? (
+        {!showInitialLoading && carouselStories.length ? (
           <div className="relative overflow-hidden rounded-3xl">
             <div
               className="flex will-change-transform transition-transform duration-700 ease-out"
@@ -409,7 +411,7 @@ const Home = () => {
           </div>
         ) : null}
 
-        {textStories.length ? (
+        {!showInitialLoading && textStories.length ? (
           <div className="rounded-2xl border border-border/70 bg-card/45 p-3 sm:rounded-3xl sm:p-4">
             <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
               {textStories.map((article, index) => {
@@ -560,7 +562,9 @@ const Home = () => {
               {!loadingMore ? <ArrowRight className="h-4 w-4" /> : null}
             </Button>
           ) : (
-            <p className="text-sm text-muted-foreground">You reached the end.</p>
+            <p className="text-sm text-muted-foreground">
+              You reached the end.
+            </p>
           )
         ) : null}
         <div ref={lazySentinelRef} className="h-4 w-full" />

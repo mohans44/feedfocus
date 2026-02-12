@@ -35,6 +35,7 @@ const Navbar = () => {
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   const fetchJsonWithTimeout = async (url, timeoutMs = 10000) => {
     const controller = new AbortController();
@@ -172,6 +173,7 @@ const Navbar = () => {
       next.set("q", query);
     }
     navigate({ pathname: "/search", search: next.toString() });
+    setShowMobileSearch(false);
   };
 
   return (
@@ -228,7 +230,7 @@ const Navbar = () => {
               type="button"
               aria-label="Search"
               className="md:hidden"
-              onClick={() => navigate("/search")}
+              onClick={() => setShowMobileSearch((prev) => !prev)}
             >
               <Search className="h-5 w-5" />
             </Button>
@@ -278,8 +280,8 @@ const Navbar = () => {
           ) : null}
         </div>
       </div>
-      {meData?.user ? (
-        <form className="container hidden pb-3 md:hidden" onSubmit={submitSearch}>
+      {meData?.user && showMobileSearch ? (
+        <form className="container pb-3 md:hidden" onSubmit={submitSearch}>
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
