@@ -266,13 +266,6 @@ const Navbar = () => {
           ) : null}
         </div>
       </div>
-      {!meData?.user ? (
-        <div className="container pb-3 md:hidden">
-          <Button className="w-full" type="button" onClick={() => navigate("/auth")}>
-            Sign in
-          </Button>
-        </div>
-      ) : null}
       {meData?.user ? (
         <form className="container pb-4 md:hidden" onSubmit={submitSearch}>
           <div className="relative w-full">

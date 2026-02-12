@@ -28,7 +28,7 @@ const Landing = () => {
 
   return (
     <div className="space-y-10">
-      <section className="top-sheen relative overflow-hidden rounded-[36px] border border-border/70 bg-gradient-to-br from-card/95 via-card/85 to-muted/55 p-8 shadow-soft sm:p-12">
+      <section className="top-sheen relative overflow-hidden rounded-[36px] border border-border/70 bg-gradient-to-br from-card/95 via-card/85 to-muted/55 p-8 shadow-soft dark:from-card/92 dark:via-card/90 dark:to-card/86 sm:p-12">
         <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-primary/20 blur-3xl" />
         <div className="absolute -bottom-20 -left-16 h-52 w-52 rounded-full bg-accent/20 blur-3xl" />
 

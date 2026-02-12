@@ -52,9 +52,9 @@ body {
 
 .dark body {
   background-image:
-    radial-gradient(circle at 15% 20%, rgba(63, 212, 183, 0.1), transparent 40%),
-    radial-gradient(circle at 85% 0%, rgba(41, 118, 113, 0.13), transparent 45%),
-    linear-gradient(180deg, #0d131d 0%, #121927 50%, #0c1119 100%);
+    radial-gradient(circle at 18% 14%, rgba(56, 153, 137, 0.06), transparent 38%),
+    radial-gradient(circle at 84% 2%, rgba(33, 92, 90, 0.07), transparent 42%),
+    linear-gradient(180deg, #0e131a 0%, #111723 55%, #0d1218 100%);
 }
 
 h1, h2, h3, h4 {
@@ -90,6 +90,6 @@ h1, h2, h3, h4 {
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 32%);
-  opacity: 0.45;
+  background: transparent;
+  opacity: 0;
 }
