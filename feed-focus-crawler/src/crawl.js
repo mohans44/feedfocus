@@ -32,6 +32,9 @@ const MAX_SITEMAP_URLS = Number(process.env.CRAWLER_MAX_SITEMAP_URLS || 1200);
 const MAX_ARTICLE_AGE_HOURS = Number(process.env.CRAWLER_MAX_ARTICLE_AGE_HOURS || 72);
 const MAX_FUTURE_SKEW_MINUTES = Number(process.env.CRAWLER_MAX_FUTURE_SKEW_MINUTES || 120);
 const MAX_RUN_MINUTES = Number(process.env.CRAWLER_MAX_RUN_MINUTES || 165);
+const MAX_PUBLISHER_MINUTES = Number(process.env.CRAWLER_MAX_PUBLISHER_MINUTES || 20);
+const ENABLE_SITEMAP_DISCOVERY = process.env.CRAWLER_ENABLE_SITEMAP_DISCOVERY !== "false";
+const MIN_RSS_CANDIDATES_FOR_SITEMAP = Number(process.env.CRAWLER_MIN_RSS_CANDIDATES_FOR_SITEMAP || 80);
 const ENABLE_HOMEPAGE_DISCOVERY = process.env.CRAWLER_ENABLE_HOMEPAGE_DISCOVERY === "true";
 const ALLOWED_LANGUAGES = (process.env.CRAWLER_ALLOWED_LANGUAGES || "en")
   .split(",")
@@ -98,6 +101,19 @@ const TOPIC_ALIASES = {
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const withTimeout = async (promiseFactory, timeoutMs, errorMessage) => {
+  let timeoutId;
+  try {
+    return await Promise.race([
+      promiseFactory(),
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
 const parseDateSafe = (value) => {
   if (!value) return null;
   const date = new Date(value);
@@ -755,7 +771,17 @@ const discoverPublisherCandidates = async (publisher) => {
   }
 
   const rssCandidates = await discoverRssCandidates(publisher, homepageHtml);
-  const sitemapCandidates = await discoverSitemapCandidates(publisher);
+  let sitemapCandidates = [];
+  const shouldDiscoverSitemaps =
+    ENABLE_SITEMAP_DISCOVERY &&
+    (publisher.forceSitemaps === true || rssCandidates.length < MIN_RSS_CANDIDATES_FOR_SITEMAP);
+  if (shouldDiscoverSitemaps) {
+    sitemapCandidates = await discoverSitemapCandidates(publisher);
+  } else if (ENABLE_SITEMAP_DISCOVERY) {
+    console.log(
+      `[${publisher.name}] skipping sitemap discovery (rssCandidates=${rssCandidates.length}, threshold=${MIN_RSS_CANDIDATES_FOR_SITEMAP})`
+    );
+  }
   const homepageCandidates =
     ENABLE_HOMEPAGE_DISCOVERY && homepageHtml ? discoverHomepageCandidates(homepageHtml, publisher) : [];
   return mergeAndFilterCandidates(publisher, [rssCandidates, sitemapCandidates, homepageCandidates]);
@@ -782,12 +808,23 @@ const run = async () => {
       break;
     }
     const startedAt = Date.now();
+    const publisherDeadlineMs = startedAt + MAX_PUBLISHER_MINUTES * 60 * 1000;
     try {
-      const candidates = await discoverPublisherCandidates(publisher);
+      const discoveryBudgetMs = Math.max(5000, publisherDeadlineMs - Date.now());
+      const candidates = await withTimeout(
+        () => discoverPublisherCandidates(publisher),
+        discoveryBudgetMs,
+        `Candidate discovery timed out after ${(discoveryBudgetMs / 1000).toFixed(1)}s`
+      );
       let success = 0;
       let failed = 0;
+      let skipped = 0;
       const failReasons = new Map();
       await asyncPool(PUBLISHER_CONCURRENCY, candidates, async (candidate) => {
+        if (Date.now() >= publisherDeadlineMs) {
+          skipped += 1;
+          return;
+        }
         try {
           await extractArticle(candidate, publisher);
           success += 1;
@@ -806,7 +843,7 @@ const run = async () => {
         .map(([reason, count]) => `${reason}:${count}`)
         .join(" | ");
       console.log(
-        `[${publisher.name}] candidates=${candidates.length} success=${success} failed=${failed} duration=${elapsed}s${topFailures ? ` failures=${topFailures}` : ""}`
+        `[${publisher.name}] candidates=${candidates.length} success=${success} failed=${failed} skipped=${skipped} duration=${elapsed}s${topFailures ? ` failures=${topFailures}` : ""}`
       );
     } catch (error) {
       console.error(`[${publisher.name}] failed: ${error.message}`);
