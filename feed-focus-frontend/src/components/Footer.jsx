@@ -6,8 +6,9 @@ const Footer = () => {
           <span className="font-semibold tracking-wide text-foreground">
             feedfocus
           </span>
-          {" · "}
-          Developed by{" "}
+        </p>
+        <p className="whitespace-nowrap">
+          <span className="mx-1">Developed by </span>
           <a
             href="https://mohanseetha.vercel.app"
             target="_blank"

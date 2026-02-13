@@ -45,12 +45,16 @@ const Feed = () => {
       ) : null}
 
       {!isLoading && !items.length ? (
-        <p className="text-sm text-muted-foreground">No articles found.</p>
+        <p className="py-2 text-center text-sm text-muted-foreground">
+          End of the road... for now. Our news robots are out fetching the next scoop.
+        </p>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {items.map((article) => (
-          <ArticleCard key={article._id || article.url} article={article} />
+          <div key={article._id || article.url}>
+            <ArticleCard article={article} />
+          </div>
         ))}
       </div>
     </div>

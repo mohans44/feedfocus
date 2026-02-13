@@ -57,8 +57,16 @@ const sortByPublishedTimeDesc = (items = []) =>
     const bTime = new Date(b?.publishedAt || 0).getTime();
     return bTime - aTime;
   });
+const toReadableSnippet = (text = "", limit = 210) => {
+  const cleaned = String(text || "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+  if (cleaned.length <= limit) return cleaned;
+  const cut = cleaned.slice(0, limit);
+  const safe = cut.slice(0, Math.max(cut.lastIndexOf(" "), 0)).trim();
+  return `${safe || cut}...`;
+};
 
-const BannerCard = ({ article }) => {
+const BannerCard = ({ article, isBookmarked, onToggleBookmark }) => {
   const fallbackImage = getCategoryPlaceholder(
     article.primaryCategory || article.topics?.[0] || "world",
   );
@@ -69,27 +77,40 @@ const BannerCard = ({ article }) => {
       href={article.url || "#"}
       target="_blank"
       rel="noreferrer"
-      className="group relative block overflow-hidden rounded-[28px] border border-border/70 bg-card"
+      className="group relative block overflow-hidden rounded-[28px] border border-border/70 bg-card/90 shadow-[0_18px_36px_-28px_rgba(0,0,0,0.55)]"
     >
       <img
         src={imageUrl}
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl brightness-50"
+        className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl brightness-35"
         onError={(event) => {
           event.currentTarget.src = fallbackImage;
         }}
       />
+      <div className="absolute inset-0 z-[0] bg-black/40" />
       <img
         src={imageUrl}
         alt={article.title}
-        className="relative z-[1] h-[190px] w-full object-cover sm:h-[300px] lg:h-[420px]"
+        className="relative z-[1] h-[220px] w-full bg-black/10 object-contain sm:h-[340px] lg:h-[460px]"
         onError={(event) => {
           event.currentTarget.src = fallbackImage;
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/15" />
-      <div className="absolute bottom-0 left-0 right-0 z-[2] border-t border-white/10 bg-black/28 p-3 backdrop-blur-lg sm:p-4">
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/80 to-black/55" />
+      <button
+        type="button"
+        aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
+        className="absolute right-3 top-3 z-[3] rounded-full border border-white/25 bg-black/60 p-2 text-white backdrop-blur-md transition hover:bg-black/75"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onToggleBookmark?.(article);
+        }}
+      >
+        {isBookmarked ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+      </button>
+      <div className="absolute bottom-0 left-0 right-0 z-[2] border-t border-white/10 bg-black/74 p-3 backdrop-blur-xl sm:p-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/75 sm:text-xs">
           {article.publisher || "Source"}
         </p>
@@ -114,6 +135,7 @@ const Home = () => {
   const [aiSummaryById, setAiSummaryById] = useState({});
   const [activeSummaryArticle, setActiveSummaryArticle] = useState(null);
   const [categorySwitching, setCategorySwitching] = useState(false);
+  const [carouselBookmarkSet, setCarouselBookmarkSet] = useState(new Set());
 
   const [extraItems, setExtraItems] = useState([]);
   const [paginationCursor, setPaginationCursor] = useState(null);
@@ -128,7 +150,7 @@ const Home = () => {
     queryFn: getMe,
     retry: false,
   });
-  const initialStoriesLimit = meData?.user ? 16 : 15;
+  const initialStoriesLimit = 21;
 
   const { data: bookmarksData } = useQuery({
     queryKey: ["bookmarks"],
@@ -174,10 +196,10 @@ const Home = () => {
   );
   const carouselStories = useMemo(() => baseStories.slice(0, 6), [baseStories]);
   const textStories = useMemo(() => {
-    const items = stories.slice(3);
+    const items = stories.slice(carouselStories.length);
     if (meData?.user) return items;
     return items.slice(0, 12);
-  }, [stories, meData?.user]);
+  }, [stories, carouselStories.length, meData?.user]);
   const showInitialLoading =
     categorySwitching || (isCategoryLoading && !stories.length);
 
@@ -187,6 +209,7 @@ const Home = () => {
     setAiSummaryById({});
     setAiLoadingId(null);
     setActiveSummaryArticle(null);
+    setCarouselBookmarkSet(new Set());
     setExtraItems([]);
     setPaginationCursor(null);
     setHasMore(true);
@@ -221,6 +244,14 @@ const Home = () => {
       setCarouselIndex((prev) => (prev + 1) % carouselStories.length);
     }, 3500);
     return () => clearInterval(timer);
+  }, [carouselStories.length]);
+
+  useEffect(() => {
+    if (!carouselStories.length) {
+      setCarouselIndex(0);
+      return;
+    }
+    setCarouselIndex((prev) => prev % carouselStories.length);
   }, [carouselStories.length]);
 
   const onBookmark = async (article) => {
@@ -357,26 +388,37 @@ const Home = () => {
           </div>
         ) : null}
 
-        {!stories.length && !showInitialLoading ? (
-          <p className="text-sm text-muted-foreground">
-            No articles found for this category yet.
-          </p>
-        ) : null}
-
         {!showInitialLoading && carouselStories.length ? (
           <div className="relative overflow-hidden rounded-3xl">
             <div
               className="flex will-change-transform transition-transform duration-700 ease-out"
               style={{ transform: `translateX(-${carouselIndex * 100}%)` }}
             >
-              {carouselStories.map((article, index) => (
+              {carouselStories.map((article, index) => {
+                const key = article._id || article.url || article.title;
+                const isBookmarked = carouselBookmarkSet.has(key);
+                return (
                 <div
                   key={`${article._id || article.url || article.title}-${index}`}
                   className="w-full flex-shrink-0"
                 >
-                  <BannerCard article={article} />
+                  <BannerCard
+                    article={article}
+                    isBookmarked={isBookmarked}
+                    onToggleBookmark={(selectedArticle) => {
+                      const bookmarkKey =
+                        selectedArticle._id || selectedArticle.url || selectedArticle.title;
+                      setCarouselBookmarkSet((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(bookmarkKey)) next.delete(bookmarkKey);
+                        else next.add(bookmarkKey);
+                        return next;
+                      });
+                    }}
+                  />
                 </div>
-              ))}
+                );
+              })}
             </div>
             {carouselStories.length > 1 ? (
               <>
@@ -384,11 +426,7 @@ const Home = () => {
                   type="button"
                   aria-label="Previous slide"
                   onClick={() =>
-                    setCarouselIndex(
-                      (prev) =>
-                        (prev - 1 + carouselStories.length) %
-                        carouselStories.length,
-                    )
+                    setCarouselIndex((prev) => (prev - 1 + carouselStories.length) % carouselStories.length)
                   }
                   className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/20 bg-black/32 p-2 text-white backdrop-blur-md transition hover:bg-black/48"
                 >
@@ -398,9 +436,7 @@ const Home = () => {
                   type="button"
                   aria-label="Next slide"
                   onClick={() =>
-                    setCarouselIndex(
-                      (prev) => (prev + 1) % carouselStories.length,
-                    )
+                    setCarouselIndex((prev) => (prev + 1) % carouselStories.length)
                   }
                   className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/20 bg-black/32 p-2 text-white backdrop-blur-md transition hover:bg-black/48"
                 >
@@ -412,9 +448,8 @@ const Home = () => {
         ) : null}
 
         {!showInitialLoading && textStories.length ? (
-          <div className="rounded-2xl border border-border/70 bg-card/45 p-3 sm:rounded-3xl sm:p-4">
-            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {textStories.map((article, index) => {
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {textStories.map((article, index) => {
                 const articleId = article._id;
                 const isBookmarked = articleId
                   ? bookmarkIdSet.has(articleId)
@@ -430,12 +465,12 @@ const Home = () => {
                 return (
                   <article
                     key={`${article._id || article.url || article.title}-${index}`}
-                    className="top-sheen flex h-full flex-col rounded-xl border border-border/80 bg-card/80 p-3 sm:rounded-2xl sm:p-3.5"
+                    className="top-sheen flex h-full flex-col rounded-xl border border-border/80 bg-card/85 p-3 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)] sm:rounded-2xl sm:p-3.5"
                   >
                     <img
                       src={imageUrl}
                       alt={article.title}
-                      className="mb-3 hidden h-36 w-full rounded-xl border border-border/70 object-cover sm:block"
+                      className="mb-3 aspect-[16/10] w-full rounded-xl border border-border/70 bg-black/5 object-contain"
                       onError={(event) => {
                         event.currentTarget.src = fallbackImage;
                       }}
@@ -475,7 +510,7 @@ const Home = () => {
 
                     {article.summary ? (
                       <p className="mt-1.5 hidden line-clamp-2 text-xs text-muted-foreground sm:mt-2 sm:block sm:line-clamp-3 sm:text-sm">
-                        {article.summary}
+                        {toReadableSnippet(article.summary, 190)}
                       </p>
                     ) : null}
 
@@ -543,11 +578,17 @@ const Home = () => {
                   </article>
                 );
               })}
-            </div>
           </div>
         ) : null}
 
-        {meData?.user ? (
+        {!showInitialLoading && !stories.length ? (
+          <p className="py-2 text-center text-sm text-muted-foreground">
+            End of the road... for now. Our news robots are out fetching the
+            next scoop.
+          </p>
+        ) : null}
+
+        {meData?.user && stories.length ? (
           hasMore ? (
             <Button
               className="w-full sm:w-auto"
@@ -562,8 +603,9 @@ const Home = () => {
               {!loadingMore ? <ArrowRight className="h-4 w-4" /> : null}
             </Button>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              You reached the end.
+            <p className="py-2 text-center text-sm text-muted-foreground">
+              End of the road... for now. Our news robots are out fetching the
+              next scoop.
             </p>
           )
         ) : null}

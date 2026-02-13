@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.get("/for-you", authRequired, async (req, res) => {
   try {
+    res.set("Cache-Control", "private, max-age=20, stale-while-revalidate=90");
     const { limit = 10 } = req.query;
     const parsedLimit = parseInt(String(limit), 10);
     const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 30) : 10;

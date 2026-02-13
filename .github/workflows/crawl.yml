@@ -15,13 +15,13 @@ on:
         default: "12"
 
 concurrency:
-  group: crawler-job
+  group: crawler-job-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 180
     defaults:
       run:
         working-directory: feed-focus-crawler
@@ -29,6 +29,14 @@ jobs:
       MONGO_URI: ${{ secrets.MONGO_URI }}
       CRAWLER_URL_LIMIT: ${{ github.event.inputs.url_limit || '800' }}
       CRAWLER_PUBLISHER_CONCURRENCY: ${{ github.event.inputs.concurrency || '12' }}
+      CRAWLER_FETCH_RETRIES: "4"
+      CRAWLER_FETCH_TIMEOUT_MS: "15000"
+      CRAWLER_ALLOWED_LANGUAGES: "en"
+      CRAWLER_MONGO_CONNECT_RETRIES: "6"
+      CRAWLER_MONGO_CONNECT_RETRY_DELAY_MS: "3000"
+      CRAWLER_MAX_RUN_MINUTES: "165"
+      CRAWLER_MAX_FUTURE_SKEW_MINUTES: "120"
+      NODE_OPTIONS: "--max-old-space-size=1536"
 
     steps:
       - name: Checkout
@@ -51,5 +59,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run crawler
-        run: node src/crawl.js
+      - name: Validate crawler config
+        run: |
+          node --check src/crawl.js
+          node -e "const fs=require('fs'); JSON.parse(fs.readFileSync('./data/publishers.json','utf8')); console.log('publishers.json valid')"
+
+      - name: Run crawler with retry
+        run: |
+          set -e
+          attempt=1
+          max=2
+          until [ "$attempt" -gt "$max" ]; do
+            echo "Crawler run attempt ${attempt}/${max}"
+            if node src/crawl.js; then
+              exit 0
+            fi
+            if [ "$attempt" -lt "$max" ]; then
+              echo "Retrying crawler in 20s..."
+              sleep 20
+            fi
+            attempt=$((attempt + 1))
+          done
+          echo "Crawler failed after ${max} attempts"
+          exit 1

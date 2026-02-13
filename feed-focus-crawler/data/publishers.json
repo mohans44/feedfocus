@@ -39,13 +39,13 @@
     "homepage": "https://www.cnn.com",
     "skipHomepage": true,
     "feeds": [
-      { "url": "http://rss.cnn.com/rss/edition.rss", "topic": "world" },
-      { "url": "http://rss.cnn.com/rss/edition_business.rss", "topic": "business" },
-      { "url": "http://rss.cnn.com/rss/edition_technology.rss", "topic": "technology" },
-      { "url": "http://rss.cnn.com/rss/edition_world.rss", "topic": "world" },
-      { "url": "http://rss.cnn.com/rss/edition_sport.rss", "topic": "sports" },
-      { "url": "http://rss.cnn.com/rss/edition_entertainment.rss", "topic": "entertainment" },
-      { "url": "http://rss.cnn.com/rss/edition_travel.rss", "topic": "travel" }
+      { "url": "https://rss.cnn.com/rss/edition.rss", "topic": "world" },
+      { "url": "https://rss.cnn.com/rss/edition_business.rss", "topic": "business" },
+      { "url": "https://rss.cnn.com/rss/edition_technology.rss", "topic": "technology" },
+      { "url": "https://rss.cnn.com/rss/edition_world.rss", "topic": "world" },
+      { "url": "https://rss.cnn.com/rss/edition_sport.rss", "topic": "sports" },
+      { "url": "https://rss.cnn.com/rss/edition_entertainment.rss", "topic": "entertainment" },
+      { "url": "https://rss.cnn.com/rss/edition_travel.rss", "topic": "travel" }
     ],
     "allowedPaths": ["/20", "/world/", "/business/", "/tech/", "/travel/", "/sport/", "/entertainment/"]
   },

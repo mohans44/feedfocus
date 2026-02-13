@@ -58,6 +58,7 @@ const buildAiSummary = (article) => {
 
 router.get("/", async (req, res) => {
   try {
+    res.set("Cache-Control", "public, max-age=30, s-maxage=60, stale-while-revalidate=180");
     const { limit = 20, cursor, topic, publisher, search } = req.query;
     const parsedLimit = parseInt(String(limit), 10);
     const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 50) : 20;

@@ -1,20 +1,19 @@
-# Feed Focus Backend (Node)
+# FeedFocus Backend
 
 Express + MongoDB API for Feed Focus.
 
 ## Features
 
 - Cookie-based JWT auth (`httpOnly`, 30-day session)
-- Security middleware (`helmet`, `compression`, rate limiting)
+- Security middleware
 - Articles API with cursor pagination, topic/publisher/search filters
 - User profile, preferences, bookmarks
-- AI-style `for-you` recommendation endpoint (preference + recency + quality scoring)
+- AI-style `for-you` recommendation
 
 ## Local setup
 
 ```bash
-cd /Users/mohansai/Developer/feedfocus-v2/feed-focus-backend-node
-cp .env.example .env
+cd /feedfocusnews/feed-focus-backend
 npm install
 npm run dev
 ```
@@ -31,8 +30,3 @@ Optional env vars:
 - `COOKIE_SAMESITE`
 - `COOKIE_SECURE`
 - `PORT`
-
-## Vercel
-
-`vercel.json` routes `/api/*` to `api/index.js`.
-`api/index.js` initializes MongoDB connection before handling requests.

@@ -30,11 +30,15 @@ const PUBLISHER_URL_LIMIT = Number(process.env.CRAWLER_URL_LIMIT || 350);
 const FEED_ITEM_LIMIT = Number(process.env.CRAWLER_FEED_ITEM_LIMIT || 140);
 const MAX_SITEMAP_URLS = Number(process.env.CRAWLER_MAX_SITEMAP_URLS || 1200);
 const MAX_ARTICLE_AGE_HOURS = Number(process.env.CRAWLER_MAX_ARTICLE_AGE_HOURS || 72);
+const MAX_FUTURE_SKEW_MINUTES = Number(process.env.CRAWLER_MAX_FUTURE_SKEW_MINUTES || 120);
+const MAX_RUN_MINUTES = Number(process.env.CRAWLER_MAX_RUN_MINUTES || 165);
 const ENABLE_HOMEPAGE_DISCOVERY = process.env.CRAWLER_ENABLE_HOMEPAGE_DISCOVERY === "true";
 const ALLOWED_LANGUAGES = (process.env.CRAWLER_ALLOWED_LANGUAGES || "en")
   .split(",")
   .map((item) => item.trim().toLowerCase())
   .filter(Boolean);
+const MONGO_CONNECT_RETRIES = Number(process.env.CRAWLER_MONGO_CONNECT_RETRIES || 5);
+const MONGO_CONNECT_RETRY_DELAY_MS = Number(process.env.CRAWLER_MONGO_CONNECT_RETRY_DELAY_MS || 2500);
 
 const TRACKING_QUERY_PREFIXES = ["utm_", "fbclid", "gclid", "mc_", "ref", "cmpid", "igshid", "mkt_tok"];
 const BLOCKED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".pdf", ".mp4", ".mp3", ".zip"];
@@ -101,12 +105,18 @@ const parseDateSafe = (value) => {
 };
 
 const hasValidDate = (value) => value instanceof Date && !Number.isNaN(value.getTime());
+const isNotFutureDate = (date) => {
+  if (!date) return true;
+  return date.getTime() <= Date.now() + MAX_FUTURE_SKEW_MINUTES * 60 * 1000;
+};
 const isRecentEnough = (date) => {
   if (!date) return true;
   return Date.now() - date.getTime() <= MAX_ARTICLE_AGE_HOURS * 60 * 60 * 1000;
 };
+const isAcceptablePublishedDate = (date) => hasValidDate(date) && isNotFutureDate(date) && isRecentEnough(date);
 const normalizeTopic = (value = "") => TOPIC_ALIASES[String(value).toLowerCase().trim()] || null;
 const cleanText = (value = "") => value.replace(/\s+/g, " ").trim();
+const stripHtml = (value = "") => cleanText(cheerio.load(`<div>${String(value || "")}</div>`)("div").text());
 const normalizeLang = (value = "") =>
   String(value)
     .toLowerCase()
@@ -124,6 +134,22 @@ const parseDateFromUrl = (url = "") => {
   if (!match) return null;
   const date = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00Z`);
   return Number.isNaN(date.getTime()) ? null : date;
+};
+const connectWithRetry = async () => {
+  let lastError = null;
+  for (let attempt = 1; attempt <= MONGO_CONNECT_RETRIES; attempt += 1) {
+    try {
+      await mongoose.connect(MONGO_URI);
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < MONGO_CONNECT_RETRIES) {
+        console.warn(`[db] connect attempt ${attempt}/${MONGO_CONNECT_RETRIES} failed: ${error.message}`);
+        await wait(MONGO_CONNECT_RETRY_DELAY_MS * attempt);
+      }
+    }
+  }
+  throw lastError ?? new Error("Mongo connection failed");
 };
 
 const canonicalizeUrl = (rawUrl) => {
@@ -344,8 +370,8 @@ const parseRssItems = (xml, baseUrl, { topicHint = null } = {}) => {
     if (!url) return;
     const publishedAt =
       parseDateSafe($item.find("pubDate").first().text().trim()) || parseDateSafe($item.find("dc\\:date").first().text().trim());
-    if (!isRecentEnough(publishedAt)) return;
-    const description = cleanText(
+    if (publishedAt && !isAcceptablePublishedDate(publishedAt)) return;
+    const description = stripHtml(
       $item.find("content\\:encoded").first().text() ||
         $item.find("description").first().text() ||
         $item.find("summary").first().text()
@@ -383,8 +409,8 @@ const parseRssItems = (xml, baseUrl, { topicHint = null } = {}) => {
     if (!url) return;
     const publishedAt =
       parseDateSafe($entry.find("published").first().text().trim()) || parseDateSafe($entry.find("updated").first().text().trim());
-    if (!isRecentEnough(publishedAt)) return;
-    const description = cleanText(
+    if (publishedAt && !isAcceptablePublishedDate(publishedAt)) return;
+    const description = stripHtml(
       $entry.find("content").first().text() ||
         $entry.find("summary").first().text() ||
         $entry.find("content\\:encoded").first().text()
@@ -496,7 +522,7 @@ const mergeAndFilterCandidates = (publisher, candidateLists) => {
       if (!normalized) continue;
       if (!matchesPublisherDomain(normalized, domain)) continue;
       if (!isLikelyArticleUrl(normalized, publisher)) continue;
-      if (!isRecentEnough(item.publishedAt)) continue;
+      if (item.publishedAt && !isAcceptablePublishedDate(item.publishedAt)) continue;
 
       const existing = merged.get(normalized);
       if (!existing) {
@@ -578,21 +604,35 @@ const upsertArticleFromParts = async ({
   );
 };
 
+const normalizeContent = (value = "") => {
+  const cleaned = cleanText(value)
+    .replace(/\s*\|\s*read more$/i, "")
+    .replace(/\s*read more$/i, "")
+    .replace(/\s*continue reading$/i, "")
+    .replace(/\s*subscribe to.*$/i, "");
+  return cleaned;
+};
+
+const sanitizeHtmlForReadability = (html = "") =>
+  String(html || "")
+    // Readability does not need CSS. Removing styles avoids jsdom/css parser crashes on modern syntax.
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<link\b[^>]*rel=["']?stylesheet["']?[^>]*>/gi, "");
+
 const extractArticle = async (candidate, publisher) => {
   const fallbackFromFeed = async () => {
     const title = candidate.titleHint || null;
-    const content = cleanText(candidate.contentHint || "");
+    const content = normalizeContent(stripHtml(candidate.contentHint || ""));
     const publishedAt = candidate.publishedAt || parseDateFromUrl(candidate.url) || null;
     const language = normalizeLang(candidate.languageHint || "en");
 
     if (!title || !content || content.length < 120) {
       throw new Error("Insufficient content");
     }
-    if (!hasValidDate(publishedAt)) throw new Error("Missing published date");
-    if (!isRecentEnough(publishedAt)) throw new Error("Too old");
+    if (!isAcceptablePublishedDate(publishedAt)) throw new Error("Invalid published date");
     if (!isAllowedLanguage(language)) throw new Error("Non-English article");
 
-    const summary = cleanText(candidate.summaryHint || content.slice(0, 320));
+    const summary = normalizeContent(stripHtml(candidate.summaryHint || content.slice(0, 320)));
     const inferredTopics = inferTopicsFromText(`${title} ${summary} ${content.slice(0, 3000)}`);
     const hintedTopic = normalizeTopic(candidate.topicHint || "");
     const topics = Array.from(new Set([hintedTopic, ...inferredTopics].filter(Boolean))).slice(0, 3);
@@ -613,10 +653,11 @@ const extractArticle = async (candidate, publisher) => {
 
   try {
     const html = await fetchWithRetry(candidate.url, { accept: "text/html,application/xhtml+xml,*/*" });
-    const dom = new JSDOM(html, { url: candidate.url });
+    const sanitizedHtml = sanitizeHtmlForReadability(html);
+    const dom = new JSDOM(sanitizedHtml, { url: candidate.url });
     const reader = new Readability(dom.window.document);
     const readable = reader.parse();
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(sanitizedHtml);
     const jsonLd = extractJsonLdArticleData($);
 
     const title =
@@ -643,8 +684,7 @@ const extractArticle = async (candidate, publisher) => {
       parseDateFromUrl(candidate.url) ||
       null;
 
-    if (!hasValidDate(publishedAt)) throw new Error("Missing published date");
-    if (!isRecentEnough(publishedAt)) throw new Error("Too old");
+    if (!isAcceptablePublishedDate(publishedAt)) throw new Error("Invalid published date");
 
     const imageUrl =
       extractMetaContent($, ["meta[property='og:image']", "meta[name='twitter:image']", "meta[itemprop='image']"]) ||
@@ -661,16 +701,16 @@ const extractArticle = async (candidate, publisher) => {
       ) || "en";
     if (!isAllowedLanguage(language)) throw new Error("Non-English article");
 
-    const readabilityText = cleanText(readable?.textContent || "");
+    const readabilityText = normalizeContent(cleanText(readable?.textContent || ""));
     const articleNodeText = cleanText(
       $("article p")
         .map((_, p) => $(p).text())
         .get()
         .join(" ")
     );
-    const jsonLdBody = cleanText(jsonLd?.articleBody || "");
-    const fallbackContent = cleanText(candidate.contentHint || "");
-    const content = [readabilityText, articleNodeText, jsonLdBody, fallbackContent]
+    const jsonLdBody = normalizeContent(cleanText(jsonLd?.articleBody || ""));
+    const fallbackContent = normalizeContent(stripHtml(candidate.contentHint || ""));
+    const content = [readabilityText, normalizeContent(articleNodeText), jsonLdBody, fallbackContent]
       .filter(Boolean)
       .sort((a, b) => b.length - a.length)[0];
 
@@ -679,7 +719,7 @@ const extractArticle = async (candidate, publisher) => {
       throw new Error("Insufficient content");
     }
 
-    const summary = cleanText(candidate.summaryHint || content.slice(0, 320));
+    const summary = normalizeContent(stripHtml(candidate.summaryHint || content.slice(0, 320)));
     const inferredTopics = inferTopicsFromText(`${title} ${summary} ${content.slice(0, 3000)}`);
     const hintedTopic = normalizeTopic(candidate.topicHint || "");
     const topics = Array.from(new Set([hintedTopic, ...inferredTopics].filter(Boolean))).slice(0, 3);
@@ -724,7 +764,8 @@ const discoverPublisherCandidates = async (publisher) => {
 const run = async () => {
   const publishersRaw = await fs.readFile(publishersPath, "utf-8");
   const publishers = JSON.parse(publishersRaw);
-  await mongoose.connect(MONGO_URI);
+  const runStartedAt = Date.now();
+  await connectWithRetry();
   console.log(
     `Crawler started. publishers=${publishers.length} urlLimit=${PUBLISHER_URL_LIMIT} concurrency=${PUBLISHER_CONCURRENCY}`
   );
@@ -733,6 +774,13 @@ const run = async () => {
   let totalFailed = 0;
 
   for (const publisher of publishers) {
+    const elapsedMs = Date.now() - runStartedAt;
+    if (elapsedMs >= MAX_RUN_MINUTES * 60 * 1000) {
+      console.warn(
+        `Stopping early due to max runtime (${MAX_RUN_MINUTES}m). Processed part of publisher list safely.`
+      );
+      break;
+    }
     const startedAt = Date.now();
     try {
       const candidates = await discoverPublisherCandidates(publisher);
