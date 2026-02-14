@@ -62,6 +62,12 @@ const BLOCKED_PATH_PARTS = [
   "/tag/",
   "/author/",
 ];
+const BLOCKED_TITLE_PATTERNS = [
+  /\blive\b/i,
+  /\blive updates?\b/i,
+  /\bas it happened\b/i,
+  /\blive blog\b/i,
+];
 const ARTICLE_PATH_HINTS = [
   "/news/",
   "/article/",
@@ -132,6 +138,7 @@ const isRecentEnough = (date) => {
 const isAcceptablePublishedDate = (date) => hasValidDate(date) && isNotFutureDate(date) && isRecentEnough(date);
 const normalizeTopic = (value = "") => TOPIC_ALIASES[String(value).toLowerCase().trim()] || null;
 const cleanText = (value = "") => value.replace(/\s+/g, " ").trim();
+const isLiveTitle = (value = "") => BLOCKED_TITLE_PATTERNS.some((pattern) => pattern.test(cleanText(value)));
 const stripHtml = (value = "") => cleanText(cheerio.load(`<div>${String(value || "")}</div>`)("div").text());
 const normalizeLang = (value = "") =>
   String(value)
@@ -531,6 +538,7 @@ const discoverHomepageCandidates = (html, publisher) => {
 const mergeAndFilterCandidates = (publisher, candidateLists) => {
   const domain = domainForMatch(publisher.homepage);
   const merged = new Map();
+  const seenByTitle = new Map();
 
   for (const list of candidateLists) {
     for (const item of list) {
@@ -538,11 +546,29 @@ const mergeAndFilterCandidates = (publisher, candidateLists) => {
       if (!normalized) continue;
       if (!matchesPublisherDomain(normalized, domain)) continue;
       if (!isLikelyArticleUrl(normalized, publisher)) continue;
+      if (item?.titleHint && isLiveTitle(item.titleHint)) continue;
+      if (normalized.toLowerCase().includes("/live/")) continue;
+      if (
+        item?.sourceHint === "sitemap" &&
+        !item?.publishedAt &&
+        !parseDateFromUrl(normalized)
+      ) {
+        // Sitemap URLs without any publish-time signal are mostly stale/noisy.
+        continue;
+      }
       if (item.publishedAt && !isAcceptablePublishedDate(item.publishedAt)) continue;
 
       const existing = merged.get(normalized);
       if (!existing) {
-        merged.set(normalized, { ...item, url: normalized });
+        const candidate = { ...item, url: normalized };
+        const titleKey = cleanText(candidate.titleHint || "").toLowerCase();
+        const ts = candidate.publishedAt?.getTime() || parseDateFromUrl(normalized)?.getTime() || 0;
+        if (titleKey && ts) {
+          const dedupeKey = `${publisher.name}|${titleKey}|${Math.floor(ts / (10 * 60 * 1000))}`;
+          if (seenByTitle.has(dedupeKey)) continue;
+          seenByTitle.set(dedupeKey, true);
+        }
+        merged.set(normalized, candidate);
         continue;
       }
 
@@ -598,14 +624,22 @@ const upsertArticleFromParts = async ({
   imageUrl,
   sourceType,
 }) => {
+  if (!publishedAt || !hasValidDate(publishedAt)) return;
+  const normalizedPublishedAt = new Date(publishedAt);
+  normalizedPublishedAt.setSeconds(0, 0);
   const primaryCategory = topics[0] || "world";
   await Article.updateOne(
-    { url },
     {
+      $or: [{ url }, { publisher, title, publishedAt: normalizedPublishedAt }],
+    },
+    {
+      $setOnInsert: {
+        url,
+      },
       $set: {
         title,
         publisher,
-        publishedAt,
+        publishedAt: normalizedPublishedAt,
         fetchedAt: new Date(),
         summary,
         content,
@@ -638,6 +672,7 @@ const sanitizeHtmlForReadability = (html = "") =>
 const extractArticle = async (candidate, publisher) => {
   const fallbackFromFeed = async () => {
     const title = candidate.titleHint || null;
+    if (isLiveTitle(title || "")) throw new Error("Live article skipped");
     const content = normalizeContent(stripHtml(candidate.contentHint || ""));
     const publishedAt = candidate.publishedAt || parseDateFromUrl(candidate.url) || null;
     const language = normalizeLang(candidate.languageHint || "en");
@@ -683,6 +718,7 @@ const extractArticle = async (candidate, publisher) => {
       cleanText($("h1").first().text()) ||
       candidate.titleHint ||
       null;
+    if (isLiveTitle(title || "")) throw new Error("Live article skipped");
 
     const publishedAt =
       parseDateSafe(
@@ -774,13 +810,18 @@ const discoverPublisherCandidates = async (publisher) => {
   let sitemapCandidates = [];
   const shouldDiscoverSitemaps =
     ENABLE_SITEMAP_DISCOVERY &&
+    publisher.disableSitemaps !== true &&
     (publisher.forceSitemaps === true || rssCandidates.length < MIN_RSS_CANDIDATES_FOR_SITEMAP);
   if (shouldDiscoverSitemaps) {
     sitemapCandidates = await discoverSitemapCandidates(publisher);
   } else if (ENABLE_SITEMAP_DISCOVERY) {
-    console.log(
-      `[${publisher.name}] skipping sitemap discovery (rssCandidates=${rssCandidates.length}, threshold=${MIN_RSS_CANDIDATES_FOR_SITEMAP})`
-    );
+    if (publisher.disableSitemaps === true) {
+      console.log(`[${publisher.name}] skipping sitemap discovery (publisher.disableSitemaps=true)`);
+    } else {
+      console.log(
+        `[${publisher.name}] skipping sitemap discovery (rssCandidates=${rssCandidates.length}, threshold=${MIN_RSS_CANDIDATES_FOR_SITEMAP})`
+      );
+    }
   }
   const homepageCandidates =
     ENABLE_HOMEPAGE_DISCOVERY && homepageHtml ? discoverHomepageCandidates(homepageHtml, publisher) : [];

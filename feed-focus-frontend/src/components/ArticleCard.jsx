@@ -9,6 +9,16 @@ const toReadableSnippet = (text = "", limit = 220) => {
   const safe = cut.slice(0, Math.max(cut.lastIndexOf(" "), 0)).trim();
   return `${safe || cut}...`;
 };
+const formatCardDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 const ArticleCard = ({ article, actions = null }) => {
   const fallbackImage = getCategoryPlaceholder(article.primaryCategory || article.topics?.[0] || "world");
@@ -27,7 +37,7 @@ const ArticleCard = ({ article, actions = null }) => {
 
       <div className="text-xs text-muted-foreground">
         {article.publisher}
-        {article.publishedAt ? <span> • {new Date(article.publishedAt).toLocaleString()}</span> : null}
+        {article.publishedAt ? <span> • {formatCardDate(article.publishedAt)}</span> : null}
       </div>
 
       <h3 className="mt-2 line-clamp-3 text-sm font-semibold sm:text-base">{article.title}</h3>

@@ -65,6 +65,16 @@ const toReadableSnippet = (text = "", limit = 210) => {
   const safe = cut.slice(0, Math.max(cut.lastIndexOf(" "), 0)).trim();
   return `${safe || cut}...`;
 };
+const formatCardDate = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
 
 const BannerCard = ({ article, isBookmarked, onToggleBookmark }) => {
   const fallbackImage = getCategoryPlaceholder(
@@ -483,7 +493,7 @@ const Home = () => {
                         </p>
                         {article.publishedAt ? (
                           <p className="hidden truncate sm:block">
-                            {new Date(article.publishedAt).toLocaleString()}
+                            {formatCardDate(article.publishedAt)}
                           </p>
                         ) : null}
                       </div>

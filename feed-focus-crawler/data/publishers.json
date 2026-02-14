@@ -38,6 +38,7 @@
     "name": "CNN",
     "homepage": "https://www.cnn.com",
     "skipHomepage": true,
+    "disableSitemaps": true,
     "feeds": [
       { "url": "https://rss.cnn.com/rss/edition.rss", "topic": "world" },
       { "url": "https://rss.cnn.com/rss/edition_business.rss", "topic": "business" },
@@ -86,6 +87,7 @@
     "name": "CNBC",
     "homepage": "https://www.cnbc.com/world/",
     "skipHomepage": true,
+    "disableSitemaps": true,
     "feeds": [
       { "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html", "topic": "world" },
       { "url": "https://www.cnbc.com/id/10001147/device/rss/rss.html", "topic": "business" },
@@ -97,6 +99,7 @@
     "name": "Al Jazeera English",
     "homepage": "https://www.aljazeera.com",
     "skipHomepage": true,
+    "disableSitemaps": true,
     "feeds": [
       { "url": "https://www.aljazeera.com/xml/rss/all.xml", "topic": "world" }
     ],
@@ -172,6 +175,7 @@
     "name": "The Verge",
     "homepage": "https://www.theverge.com",
     "skipHomepage": true,
+    "disableSitemaps": true,
     "feeds": [
       { "url": "https://www.theverge.com/rss/index.xml", "topic": "technology" }
     ],
@@ -246,9 +250,253 @@
     "name": "Cricbuzz",
     "homepage": "https://www.cricbuzz.com",
     "skipHomepage": true,
+    "disableSitemaps": true,
     "feeds": [
       { "url": "https://www.cricbuzz.com/cricket-news/rss-feed", "topic": "sports" }
     ],
     "allowedPaths": ["/cricket-news/"]
+  },
+  {
+    "name": "9to5Google",
+    "homepage": "https://9to5google.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://9to5google.com/feed/", "topic": "technology" }
+    ],
+    "allowedPaths": ["/20", "/guides/", "/news/"]
+  },
+  {
+    "name": "9to5Mac",
+    "homepage": "https://9to5mac.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://9to5mac.com/feed/", "topic": "technology" }
+    ],
+    "allowedPaths": ["/20", "/guides/", "/news/"]
+  },
+  {
+    "name": "The New Indian Express",
+    "homepage": "https://www.newindianexpress.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.newindianexpress.com/sitemap.xml"],
+    "allowedPaths": ["/states/", "/nation/", "/cities/", "/business/", "/sport/", "/lifestyle/", "/world/"]
+  },
+  {
+    "name": "Deccan Herald",
+    "homepage": "https://www.deccanherald.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.deccanherald.com/sitemap.xml"],
+    "allowedPaths": ["/india/", "/state/", "/karnataka/", "/business/", "/science/", "/sports/", "/technology/"]
+  },
+  {
+    "name": "The Tribune India",
+    "homepage": "https://www.tribuneindia.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.tribuneindia.com/sitemap.xml"],
+    "allowedPaths": ["/news/", "/state/", "/business/", "/sports/", "/lifestyle/", "/nation/"]
+  },
+  {
+    "name": "The Telegraph India",
+    "homepage": "https://www.telegraphindia.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.telegraphindia.com/sitemap.xml"],
+    "allowedPaths": ["/india/", "/states/", "/west-bengal/", "/business/", "/sports/", "/world/"]
+  },
+  {
+    "name": "EastMojo",
+    "homepage": "https://www.eastmojo.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.eastmojo.com/sitemap.xml"],
+    "allowedPaths": ["/assam/", "/meghalaya/", "/manipur/", "/nagaland/", "/mizoram/", "/sikkim/", "/tripura/", "/arunachal-pradesh/"]
+  },
+  {
+    "name": "Greater Kashmir",
+    "homepage": "https://www.greaterkashmir.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.greaterkashmir.com/sitemap_index.xml"],
+    "allowedPaths": ["/jammu-kashmir/", "/kashmir/", "/news/", "/business/", "/sports/"]
+  },
+  {
+    "name": "The Arunachal Times",
+    "homepage": "https://arunachaltimes.in",
+    "skipHomepage": true,
+    "sitemaps": ["https://arunachaltimes.in/sitemap.xml"],
+    "allowedPaths": ["/index.php/", "/north-east/", "/national/", "/international/"]
+  },
+  {
+    "name": "The Shillong Times",
+    "homepage": "https://theshillongtimes.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://theshillongtimes.com/sitemap_index.xml"],
+    "allowedPaths": ["/meghalaya/", "/north-east/", "/national/", "/international/", "/sports/"]
+  },
+  {
+    "name": "The Morung Express",
+    "homepage": "https://morungexpress.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://morungexpress.com/sitemap.xml"],
+    "allowedPaths": ["/nagaland/", "/north-east/", "/national/", "/world/", "/sports/"]
+  },
+  {
+    "name": "Telangana Today",
+    "homepage": "https://telanganatoday.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://telanganatoday.com/sitemap.xml"],
+    "allowedPaths": ["/telangana/", "/hyderabad/", "/business/", "/sports/", "/world/"]
+  },
+  {
+    "name": "Goa Chronicle",
+    "homepage": "https://goachronicle.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://goachronicle.com/sitemap.xml"],
+    "allowedPaths": ["/india/", "/goa/", "/world/", "/business/", "/sports/"]
+  },
+  {
+    "name": "Himachal Watcher",
+    "homepage": "https://himachalwatcher.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://himachalwatcher.com/sitemap.xml"],
+    "allowedPaths": ["/himachal-pradesh/", "/india/", "/world/", "/business/", "/health/"]
+  },
+  {
+    "name": "The Kashmir Monitor",
+    "homepage": "https://www.thekashmirmonitor.net",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.thekashmirmonitor.net/sitemap_index.xml"],
+    "allowedPaths": ["/jammu-kashmir/", "/kashmir/", "/india/", "/world/", "/sports/"]
+  },
+  {
+    "name": "ABC News",
+    "homepage": "https://abcnews.go.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://abcnews.go.com/abcnews/topstories", "topic": "world" },
+      { "url": "https://abcnews.go.com/abcnews/businessheadlines", "topic": "business" },
+      { "url": "https://abcnews.go.com/abcnews/technologyheadlines", "topic": "technology" },
+      { "url": "https://abcnews.go.com/abcnews/entertainmentheadlines", "topic": "entertainment" },
+      { "url": "https://abcnews.go.com/abcnews/sportsheadlines", "topic": "sports" },
+      { "url": "https://abcnews.go.com/abcnews/healthheadlines", "topic": "health" }
+    ],
+    "allowedPaths": ["/story", "/Politics/", "/Business/", "/International/", "/Technology/", "/Health/", "/Entertainment/", "/Sports/"]
+  },
+  {
+    "name": "CBS News",
+    "homepage": "https://www.cbsnews.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.cbsnews.com/latest/rss/main", "topic": "world" },
+      { "url": "https://www.cbsnews.com/latest/rss/world", "topic": "world" },
+      { "url": "https://www.cbsnews.com/latest/rss/politics", "topic": "world" },
+      { "url": "https://www.cbsnews.com/latest/rss/technology", "topic": "technology" },
+      { "url": "https://www.cbsnews.com/latest/rss/health", "topic": "health" }
+    ],
+    "allowedPaths": ["/news/", "/live-updates/"]
+  },
+  {
+    "name": "Sky News",
+    "homepage": "https://news.sky.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://feeds.skynews.com/feeds/rss/home.xml", "topic": "world" },
+      { "url": "https://feeds.skynews.com/feeds/rss/world.xml", "topic": "world" },
+      { "url": "https://feeds.skynews.com/feeds/rss/business.xml", "topic": "business" },
+      { "url": "https://feeds.skynews.com/feeds/rss/technology.xml", "topic": "technology" }
+    ],
+    "allowedPaths": ["/story/", "/video/"]
+  },
+  {
+    "name": "Fortune",
+    "homepage": "https://fortune.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://fortune.com/feed/", "topic": "business" }
+    ],
+    "allowedPaths": ["/20", "/well/", "/europe/", "/asia/"]
+  },
+  {
+    "name": "TIME",
+    "homepage": "https://time.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://time.com/feed/", "topic": "world" }
+    ],
+    "allowedPaths": ["/20", "/politics/", "/health/", "/business/", "/science/", "/travel/"]
+  },
+  {
+    "name": "The Economic Times",
+    "homepage": "https://economictimes.indiatimes.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://economictimes.indiatimes.com/rssfeedsdefault.cms", "topic": "business" },
+      { "url": "https://economictimes.indiatimes.com/tech/rssfeeds/13357270.cms", "topic": "technology" },
+      { "url": "https://economictimes.indiatimes.com/news/rssfeeds/1715249553.cms", "topic": "india" },
+      { "url": "https://economictimes.indiatimes.com/news/international/rssfeeds/2640301.cms", "topic": "world" }
+    ],
+    "allowedPaths": ["/news/", "/industry/", "/tech/", "/markets/", "/nri/"]
+  },
+  {
+    "name": "Mint",
+    "homepage": "https://www.livemint.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.livemint.com/rss/news", "topic": "business" },
+      { "url": "https://www.livemint.com/rss/technology", "topic": "technology" },
+      { "url": "https://www.livemint.com/rss/politics", "topic": "india" },
+      { "url": "https://www.livemint.com/rss/companies", "topic": "business" }
+    ],
+    "allowedPaths": ["/news/", "/market/", "/politics/", "/companies/", "/technology/"]
+  },
+  {
+    "name": "The Times of India",
+    "homepage": "https://timesofindia.indiatimes.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://timesofindia.indiatimes.com/rssfeedstopstories.cms", "topic": "india" },
+      { "url": "https://timesofindia.indiatimes.com/world/rssfeeds/296589292.cms", "topic": "world" },
+      { "url": "https://timesofindia.indiatimes.com/business/rssfeeds/1898055.cms", "topic": "business" },
+      { "url": "https://timesofindia.indiatimes.com/tech/rssfeeds/66949542.cms", "topic": "technology" },
+      { "url": "https://timesofindia.indiatimes.com/sports/rssfeeds/4719148.cms", "topic": "sports" }
+    ],
+    "allowedPaths": ["/india/", "/world/", "/business/", "/tech/", "/sports/"]
+  },
+  {
+    "name": "Financial Express",
+    "homepage": "https://www.financialexpress.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.financialexpress.com/feed/", "topic": "business" }
+    ],
+    "allowedPaths": ["/business/", "/economy/", "/industry/", "/market/", "/india-news/"]
+  },
+  {
+    "name": "ThePrint",
+    "homepage": "https://theprint.in",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://theprint.in/feed/", "topic": "india" }
+    ],
+    "allowedPaths": ["/india/", "/world/", "/economy/", "/defence/", "/science/", "/health/"]
+  },
+  {
+    "name": "Scroll.in",
+    "homepage": "https://scroll.in",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://scroll.in/feed", "topic": "india" }
+    ],
+    "allowedPaths": ["/article/", "/latest/", "/world/", "/sport/", "/technology/"]
+  },
+  {
+    "name": "India Today",
+    "homepage": "https://www.indiatoday.in",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.indiatoday.in/rss/home", "topic": "india" },
+      { "url": "https://www.indiatoday.in/rss/1206584", "topic": "world" },
+      { "url": "https://www.indiatoday.in/rss/1206577", "topic": "technology" },
+      { "url": "https://www.indiatoday.in/rss/1206578", "topic": "sports" },
+      { "url": "https://www.indiatoday.in/rss/1206515", "topic": "health" }
+    ],
+    "allowedPaths": ["/india/", "/world/", "/technology/", "/sports/", "/health/"]
   }
 ]

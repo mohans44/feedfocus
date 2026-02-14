@@ -22,11 +22,14 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || searchParams.get("search") || "");
-  const { data: meData } = useQuery({
+  const { data: meData, isLoading: meLoading } = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
     retry: false,
+    staleTime: 60 * 1000,
   });
+  const isAuthResolved = !meLoading;
+  const isLoggedIn = Boolean(meData?.user);
   const [theme, setTheme] = useState(() => {
     const stored = localStorage.getItem("theme");
     if (stored === "dark" || stored === "light") return stored;
@@ -122,7 +125,7 @@ const Navbar = () => {
       }
     };
 
-    if (!meData?.user) {
+    if (!isLoggedIn) {
       setWeather(null);
       setWeatherLoading(false);
       setWeatherError(false);
@@ -160,7 +163,7 @@ const Navbar = () => {
     return () => {
       ignore = true;
     };
-  }, [meData?.user]);
+  }, [isLoggedIn]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
@@ -187,7 +190,7 @@ const Navbar = () => {
           <span className="font-display text-lg font-semibold tracking-tight sm:text-xl">
             feedfocus
           </span>
-          {meData?.user && (weather || weatherLoading || weatherError) ? (
+          {isLoggedIn && (weather || weatherLoading || weatherError) ? (
             <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/70 px-2 py-1 text-[11px] text-muted-foreground sm:px-2.5 sm:text-xs">
               {(() => {
                 const { Icon, colorClass } = getWeatherVisual(weather?.code);
@@ -203,7 +206,7 @@ const Navbar = () => {
           ) : null}
         </button>
 
-        {meData?.user ? (
+        {isLoggedIn ? (
           <form
             className="hidden max-w-xl flex-1 items-center md:flex"
             onSubmit={submitSearch}
@@ -223,7 +226,7 @@ const Navbar = () => {
         )}
 
         <div className="flex items-center gap-1 sm:gap-2">
-          {meData?.user ? (
+          {isLoggedIn ? (
             <Button
               variant="ghost"
               size="icon"
@@ -253,11 +256,12 @@ const Navbar = () => {
             size="icon"
             type="button"
             aria-label="Bookmarks"
-            onClick={() => navigate(meData?.user ? "/bookmarks" : "/auth")}
+            onClick={() => navigate(isLoggedIn ? "/bookmarks" : "/auth")}
+            disabled={!isAuthResolved}
           >
             <Bookmark className="h-5 w-5" />
           </Button>
-          {meData?.user ? (
+          {isLoggedIn ? (
             <Button
               variant="ghost"
               size="icon"
@@ -268,7 +272,7 @@ const Navbar = () => {
               <UserCircle className="h-6 w-6" />
             </Button>
           ) : null}
-          {!meData?.user ? (
+          {!isLoggedIn && isAuthResolved ? (
             <Button
               variant="outline"
               size="sm"
@@ -278,9 +282,12 @@ const Navbar = () => {
               Sign in
             </Button>
           ) : null}
+          {!isLoggedIn && !isAuthResolved ? (
+            <div className="h-8 w-16 animate-pulse rounded-md border border-border/70 bg-card/60" />
+          ) : null}
         </div>
       </div>
-      {meData?.user && showMobileSearch ? (
+      {isLoggedIn && showMobileSearch ? (
         <form className="container pb-3 md:hidden" onSubmit={submitSearch}>
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
