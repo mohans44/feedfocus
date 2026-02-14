@@ -13,6 +13,7 @@ const router = express.Router();
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const GEMINI_API_VERSION = process.env.GEMINI_API_VERSION || "v1beta";
 const AI_SUMMARY_DAILY_LIMIT = Number(process.env.AI_SUMMARY_DAILY_LIMIT || 15);
 
 const summarizeText = (content = "", maxSentences = 4) => {
@@ -127,42 +128,73 @@ const buildAiPrompt = (article) => {
   ].join("\n");
 };
 
+const GEMINI_MODEL_CANDIDATES = [
+  GEMINI_MODEL,
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-1.5-flash-latest",
+  "gemini-1.5-flash",
+].filter(Boolean);
+
+const callGeminiGenerate = async (model, prompt) => {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${encodeURIComponent(
+      model
+    )}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`,
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.2,
+          maxOutputTokens: 500,
+          responseMimeType: "application/json",
+        },
+      }),
+    }
+  );
+  return response;
+};
+
 const generateGeminiSummary = async (article) => {
   if (!GEMINI_API_KEY) {
     throw new Error("AI provider is not configured (GEMINI_API_KEY missing)");
   }
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-      GEMINI_MODEL
-    )}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`,
-    {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: buildAiPrompt(article) }],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.2,
-        maxOutputTokens: 500,
-        responseMimeType: "application/json",
-      },
-    }),
-  }
-  );
+  const prompt = buildAiPrompt(article);
+  let payload = null;
+  let selectedModel = "";
+  let lastError = "";
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Gemini request failed (${response.status}): ${body.slice(0, 240)}`);
+  for (const model of GEMINI_MODEL_CANDIDATES) {
+    const response = await callGeminiGenerate(model, prompt);
+    if (!response.ok) {
+      const body = await response.text();
+      lastError = `Gemini request failed for ${model} (${response.status}): ${body.slice(0, 240)}`;
+      // 404 usually means model name mismatch/availability mismatch. Try next.
+      if (response.status === 404 || response.status === 400) {
+        continue;
+      }
+      throw new Error(lastError);
+    }
+
+    payload = await response.json();
+    selectedModel = model;
+    break;
   }
 
-  const payload = await response.json();
+  if (!payload) {
+    throw new Error(lastError || "Gemini request failed for all candidate models");
+  }
+
   const text =
     payload?.candidates?.[0]?.content?.parts?.map((part) => part?.text || "").join("") || "";
   const parsed = parseModelJson(text);
@@ -189,7 +221,7 @@ const generateGeminiSummary = async (article) => {
     keyPoints: keyPoints.length ? keyPoints : [summaryText],
     category,
     generatedAt: new Date(),
-    model: GEMINI_MODEL,
+    model: selectedModel || GEMINI_MODEL,
   };
 };
 

@@ -32,4 +32,5 @@ Optional env vars:
 - `PORT`
 - `GEMINI_API_KEY` (required for real AI summaries)
 - `GEMINI_MODEL` (default: `gemini-1.5-flash`)
+- `GEMINI_API_VERSION` (default: `v1beta`)
 - `AI_SUMMARY_DAILY_LIMIT` (default: `15`)
