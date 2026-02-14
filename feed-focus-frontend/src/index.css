@@ -166,3 +166,16 @@ h1, h2, h3, h4 {
 .snap-fade-in {
   animation: snapFadeIn 230ms ease-out forwards;
 }
+
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    scrollbar-width: none;
+  }
+
+  body::-webkit-scrollbar,
+  #root::-webkit-scrollbar {
+    display: none;
+  }
+}

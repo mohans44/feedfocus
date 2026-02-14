@@ -230,6 +230,7 @@ const Home = () => {
   const [activeSummaryArticle, setActiveSummaryArticle] = useState(null);
   const [mobileSummaryOpenId, setMobileSummaryOpenId] = useState(null);
   const [mobileSummaryTransition, setMobileSummaryTransition] = useState(null);
+  const [mobileImagePreview, setMobileImagePreview] = useState(null);
   const [mobileCardIndex, setMobileCardIndex] = useState(0);
   const [categorySwitching, setCategorySwitching] = useState(false);
   const [carouselBookmarkSet, setCarouselBookmarkSet] = useState(new Set());
@@ -348,6 +349,7 @@ const Home = () => {
     setActiveSummaryArticle(null);
     setMobileSummaryOpenId(null);
     setMobileSummaryTransition(null);
+    setMobileImagePreview(null);
     setMobileCardIndex(0);
     setCarouselBookmarkSet(new Set());
     setExtraItems([]);
@@ -591,6 +593,17 @@ const Home = () => {
     };
   }, [activeSummaryArticle?._id]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const isMobile = window.matchMedia("(max-width: 767px)").matches;
+    if (!isMobile) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, []);
+
   return (
     <div className="space-y-3 sm:space-y-10">
       {!meData?.user ? (
@@ -780,13 +793,17 @@ const Home = () => {
                 const isBusy = bookmarkBusyId === articleId;
                 const aiPayload = articleId ? aiSummaryById[articleId] : null;
                 const isSummaryOpen = mobileSummaryOpenId === articleId;
-                const transitionPhase =
-                  mobileSummaryTransition?.id === articleId
-                    ? mobileSummaryTransition.phase
-                    : null;
-                const bodyText = isSummaryOpen
-                  ? aiPayload?.summary || ""
-                  : article.content || article.summary || "";
+              const transitionPhase =
+                mobileSummaryTransition?.id === articleId
+                  ? mobileSummaryTransition.phase
+                  : null;
+              const fallbackImage = getCategoryPlaceholder(
+                article.primaryCategory || article.topics?.[0] || "world",
+              );
+              const imageSrc = article.imageUrl || fallbackImage;
+              const bodyText = isSummaryOpen
+                ? aiPayload?.summary || ""
+                : article.content || article.summary || "";
 
                 return (
                   <div
@@ -795,26 +812,27 @@ const Home = () => {
                   >
                   <article className="flex h-[82dvh] flex-col overflow-hidden rounded-xl border border-border/80 bg-background/75 p-3 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)]">
                       <div className="relative mb-2.5">
-                        <img
-                          src={
-                            article.imageUrl ||
-                            getCategoryPlaceholder(
-                              article.primaryCategory ||
-                                article.topics?.[0] ||
-                                "world",
-                            )
+                        <button
+                          type="button"
+                          className="block w-full"
+                          onClick={() =>
+                            setMobileImagePreview({
+                              src: imageSrc,
+                              fallback: fallbackImage,
+                              title: article.title,
+                            })
                           }
-                          alt={article.title}
-                        className="h-[34dvh] w-full rounded-lg border border-border/70 bg-black/5 object-cover"
-                          loading="lazy"
-                          onError={(event) => {
-                            event.currentTarget.src = getCategoryPlaceholder(
-                              article.primaryCategory ||
-                                article.topics?.[0] ||
-                                "world",
-                            );
-                          }}
-                        />
+                        >
+                          <img
+                            src={imageSrc}
+                            alt={article.title}
+                            className="h-[34dvh] w-full rounded-lg border border-border/70 bg-black/5 object-cover"
+                            loading="lazy"
+                            onError={(event) => {
+                              event.currentTarget.src = fallbackImage;
+                            }}
+                          />
+                        </button>
                         {article.url ? (
                           <a
                             href={article.url}
@@ -1117,6 +1135,35 @@ const Home = () => {
             </div>
           </div>
         </>
+      ) : null}
+
+      {mobileImagePreview ? (
+        <div
+          className="fixed inset-0 z-[70] bg-black/90 p-4 md:hidden"
+          onClick={() => setMobileImagePreview(null)}
+        >
+          <button
+            type="button"
+            aria-label="Close image"
+            className="absolute right-4 top-4 z-[71] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/25 bg-black/70 text-white shadow-[0_10px_24px_-12px_rgba(0,0,0,0.7)]"
+            onClick={() => setMobileImagePreview(null)}
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <div
+            className="flex h-full items-center justify-center"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={mobileImagePreview.src}
+              alt={mobileImagePreview.title || "Article image"}
+              className="max-h-[90vh] w-full rounded-xl object-contain"
+              onError={(event) => {
+                event.currentTarget.src = mobileImagePreview.fallback;
+              }}
+            />
+          </div>
+        </div>
       ) : null}
     </div>
   );
