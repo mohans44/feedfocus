@@ -137,10 +137,17 @@ const CLOUDFLARE_MODEL_CANDIDATES = [
 ].filter(Boolean);
 
 const callCloudflareGenerate = async (model, prompt) => {
+  const normalizedModel = String(model || "").trim();
+  if (!normalizedModel.startsWith("@cf/")) {
+    throw new Error(`Invalid Cloudflare model id: ${normalizedModel}`);
+  }
+  // Cloudflare expects model path segments, e.g. /ai/run/@cf/meta/llama-3.1-8b-instruct
+  // Do not encode "/" into "%2F" or route resolution fails with 7000.
+  const modelPath = normalizedModel.split("/").map((part) => encodeURIComponent(part)).join("/");
   const response = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(
       CLOUDFLARE_ACCOUNT_ID
-    )}/ai/run/${encodeURIComponent(model)}`,
+    )}/ai/run/${modelPath}`,
     {
       method: "POST",
       headers: {
@@ -186,6 +193,11 @@ const generateCloudflareSummary = async (article) => {
   if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN) {
     throw new Error(
       "AI provider is not configured (CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN missing)"
+    );
+  }
+  if (String(CLOUDFLARE_ACCOUNT_ID).includes("@")) {
+    throw new Error(
+      "Invalid CLOUDFLARE_ACCOUNT_ID: looks like an email. Use Cloudflare Account ID (hex string), not email."
     );
   }
 
