@@ -11,9 +11,10 @@ import {
 
 const router = express.Router();
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
-const GEMINI_API_VERSION = process.env.GEMINI_API_VERSION || "v1beta";
+const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
+const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
+const CLOUDFLARE_AI_MODEL =
+  process.env.CLOUDFLARE_AI_MODEL || "@cf/meta/llama-3.1-8b-instruct";
 const AI_SUMMARY_DAILY_LIMIT = Number(process.env.AI_SUMMARY_DAILY_LIMIT || 15);
 
 const summarizeText = (content = "", maxSentences = 4) => {
@@ -128,45 +129,64 @@ const buildAiPrompt = (article) => {
   ].join("\n");
 };
 
-const GEMINI_MODEL_CANDIDATES = [
-  GEMINI_MODEL,
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-lite",
-  "gemini-1.5-flash-latest",
-  "gemini-1.5-flash",
+const CLOUDFLARE_MODEL_CANDIDATES = [
+  CLOUDFLARE_AI_MODEL,
+  "@cf/meta/llama-3.1-8b-instruct",
+  "@cf/meta/llama-3.1-70b-instruct",
+  "@cf/mistral/mistral-7b-instruct-v0.1",
 ].filter(Boolean);
 
-const callGeminiGenerate = async (model, prompt) => {
+const callCloudflareGenerate = async (model, prompt) => {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/${GEMINI_API_VERSION}/models/${encodeURIComponent(
-      model
-    )}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`,
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(
+      CLOUDFLARE_ACCOUNT_ID
+    )}/ai/run/${encodeURIComponent(model)}`,
     {
       method: "POST",
       headers: {
         "content-type": "application/json",
+        authorization: `Bearer ${CLOUDFLARE_API_TOKEN}`,
       },
       body: JSON.stringify({
-        contents: [
+        prompt,
+        messages: [
           {
             role: "user",
-            parts: [{ text: prompt }],
+            content: prompt,
           },
         ],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 500,
-          responseMimeType: "application/json",
-        },
+        max_tokens: 500,
+        temperature: 0.2,
       }),
     }
   );
   return response;
 };
 
-const generateGeminiSummary = async (article) => {
-  if (!GEMINI_API_KEY) {
-    throw new Error("AI provider is not configured (GEMINI_API_KEY missing)");
+const extractCloudflareText = (payload = {}) => {
+  const result = payload?.result;
+  if (!result) return "";
+  if (typeof result?.response === "string") return result.response;
+  if (typeof result?.output_text === "string") return result.output_text;
+  if (Array.isArray(result?.content)) {
+    return result.content
+      .map((item) =>
+        typeof item === "string"
+          ? item
+          : typeof item?.text === "string"
+            ? item.text
+            : ""
+      )
+      .join(" ");
+  }
+  return typeof result === "string" ? result : "";
+};
+
+const generateCloudflareSummary = async (article) => {
+  if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN) {
+    throw new Error(
+      "AI provider is not configured (CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN missing)"
+    );
   }
 
   const prompt = buildAiPrompt(article);
@@ -174,12 +194,11 @@ const generateGeminiSummary = async (article) => {
   let selectedModel = "";
   let lastError = "";
 
-  for (const model of GEMINI_MODEL_CANDIDATES) {
-    const response = await callGeminiGenerate(model, prompt);
+  for (const model of CLOUDFLARE_MODEL_CANDIDATES) {
+    const response = await callCloudflareGenerate(model, prompt);
     if (!response.ok) {
       const body = await response.text();
-      lastError = `Gemini request failed for ${model} (${response.status}): ${body.slice(0, 240)}`;
-      // 404 usually means model name mismatch/availability mismatch. Try next.
+      lastError = `Cloudflare AI request failed for ${model} (${response.status}): ${body.slice(0, 240)}`;
       if (response.status === 404 || response.status === 400) {
         continue;
       }
@@ -192,11 +211,10 @@ const generateGeminiSummary = async (article) => {
   }
 
   if (!payload) {
-    throw new Error(lastError || "Gemini request failed for all candidate models");
+    throw new Error(lastError || "Cloudflare AI request failed for all candidate models");
   }
 
-  const text =
-    payload?.candidates?.[0]?.content?.parts?.map((part) => part?.text || "").join("") || "";
+  const text = extractCloudflareText(payload);
   const parsed = parseModelJson(text);
   if (!parsed) {
     throw new Error("AI provider returned invalid JSON");
@@ -221,7 +239,7 @@ const generateGeminiSummary = async (article) => {
     keyPoints: keyPoints.length ? keyPoints : [summaryText],
     category,
     generatedAt: new Date(),
-    model: selectedModel || GEMINI_MODEL,
+    model: selectedModel || CLOUDFLARE_AI_MODEL,
   };
 };
 
@@ -325,7 +343,7 @@ const handleAiSummary = async (req, res) => {
       });
     }
 
-    const aiSummary = await generateGeminiSummary(article.toObject());
+    const aiSummary = await generateCloudflareSummary(article.toObject());
     article.aiSummary = aiSummary;
     if (!article.primaryCategory || article.primaryCategory === "world") {
       const enriched = enrichArticleTopics(article.toObject());

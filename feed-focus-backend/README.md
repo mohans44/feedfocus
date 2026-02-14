@@ -30,7 +30,7 @@ Optional env vars:
 - `COOKIE_SAMESITE`
 - `COOKIE_SECURE`
 - `PORT`
-- `GEMINI_API_KEY` (required for real AI summaries)
-- `GEMINI_MODEL` (default: `gemini-1.5-flash`)
-- `GEMINI_API_VERSION` (default: `v1beta`)
+- `CLOUDFLARE_ACCOUNT_ID` (required for real AI summaries)
+- `CLOUDFLARE_API_TOKEN` (required for real AI summaries)
+- `CLOUDFLARE_AI_MODEL` (default: `@cf/meta/llama-3.1-8b-instruct`)
 - `AI_SUMMARY_DAILY_LIMIT` (default: `15`)
