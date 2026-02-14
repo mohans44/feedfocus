@@ -15,6 +15,7 @@ import {
   ExternalLink,
   Flag,
   Globe,
+  MapPin,
   Plane,
   ShieldPlus,
   Shirt,
@@ -38,6 +39,7 @@ import { getCategoryPlaceholder } from "../utils/placeholders";
 
 const categories = [
   { label: "For You", value: "for-you", icon: Sparkles },
+  { label: "Local", value: "local", icon: MapPin },
   { label: "India", value: "india", icon: Flag },
   { label: "World", value: "world", icon: Globe },
   { label: "Tech", value: "technology", icon: Cpu },
@@ -74,6 +76,66 @@ const formatCardDate = (value) => {
     month: "short",
     year: "numeric",
   });
+};
+
+const readStoredState = () => {
+  if (typeof window === "undefined") return "";
+  try {
+    const parsed = JSON.parse(localStorage.getItem("ff_user_location") || "{}");
+    return String(parsed?.state || "").trim();
+  } catch {
+    return "";
+  }
+};
+
+const STATE_KEYWORDS = {
+  "andhra pradesh": ["andhra pradesh", "visakhapatnam", "vijayawada", "tirupati"],
+  "arunachal pradesh": ["arunachal pradesh", "itanagar"],
+  assam: ["assam", "guwahati", "dibrugarh", "silchar"],
+  bihar: ["bihar", "patna", "gaya", "muzaffarpur"],
+  chhattisgarh: ["chhattisgarh", "raipur", "bilaspur"],
+  goa: ["goa", "panaji", "margao"],
+  gujarat: ["gujarat", "ahmedabad", "surat", "vadodara", "rajkot"],
+  haryana: ["haryana", "gurugram", "faridabad", "panipat"],
+  "himachal pradesh": ["himachal pradesh", "shimla", "dharamshala"],
+  jharkhand: ["jharkhand", "ranchi", "jamshedpur", "dhanbad"],
+  karnataka: ["karnataka", "bengaluru", "mysuru", "hubballi"],
+  kerala: ["kerala", "thiruvananthapuram", "kochi", "kozhikode"],
+  "madhya pradesh": ["madhya pradesh", "bhopal", "indore", "jabalpur"],
+  maharashtra: ["maharashtra", "mumbai", "pune", "nagpur", "nashik"],
+  manipur: ["manipur", "imphal"],
+  meghalaya: ["meghalaya", "shillong"],
+  mizoram: ["mizoram", "aizawl"],
+  nagaland: ["nagaland", "kohima", "dimapur"],
+  odisha: ["odisha", "orissa", "bhubaneswar", "cuttack"],
+  punjab: ["punjab", "amritsar", "ludhiana", "jalandhar"],
+  rajasthan: ["rajasthan", "jaipur", "jodhpur", "udaipur"],
+  sikkim: ["sikkim", "gangtok"],
+  "tamil nadu": ["tamil nadu", "chennai", "coimbatore", "madurai"],
+  telangana: ["telangana", "hyderabad", "warangal"],
+  tripura: ["tripura", "agartala"],
+  "uttar pradesh": ["uttar pradesh", "lucknow", "kanpur", "varanasi", "agra", "noida"],
+  uttarakhand: ["uttarakhand", "dehradun", "haridwar"],
+  "west bengal": ["west bengal", "kolkata", "howrah", "durgapur", "siliguri"],
+  delhi: ["delhi", "new delhi", "ncr"],
+  "jammu and kashmir": ["jammu and kashmir", "jammu", "srinagar", "kashmir"],
+  ladakh: ["ladakh", "leh"],
+  puducherry: ["puducherry", "pondicherry"],
+  chandigarh: ["chandigarh"],
+};
+
+const localStateKeywords = (stateName = "") => {
+  const lower = String(stateName || "").toLowerCase().trim();
+  if (!lower) return [];
+  const base = STATE_KEYWORDS[lower] || [lower];
+  return Array.from(new Set([lower, ...base]));
+};
+
+const isLocalStateMatch = (article = {}, stateName = "") => {
+  const keywords = localStateKeywords(stateName);
+  if (!keywords.length) return false;
+  const haystack = `${article.title || ""} ${article.summary || ""} ${(article.content || "").slice(0, 1200)} ${article.url || ""}`.toLowerCase();
+  return keywords.some((keyword) => haystack.includes(keyword));
 };
 
 const BannerCard = ({ article, isBookmarked, onToggleBookmark }) => {
@@ -153,6 +215,7 @@ const Home = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [autoLazyLoad, setAutoLazyLoad] = useState(false);
   const [showGoTop, setShowGoTop] = useState(false);
+  const [userStateName, setUserStateName] = useState(() => readStoredState());
   const lazySentinelRef = useRef(null);
 
   const { data: meData } = useQuery({
@@ -174,12 +237,19 @@ const Home = () => {
     enabled: Boolean(meData?.user) && selectedTopic === "for-you",
   });
 
+  const apiTopic =
+    selectedTopic === "local"
+      ? "india"
+      : selectedTopic !== "for-you"
+        ? selectedTopic
+        : undefined;
+
   const { data: topData, isFetching: articlesFetching } = useQuery({
-    queryKey: ["articles", selectedTopic, search, initialStoriesLimit],
+    queryKey: ["articles", selectedTopic, apiTopic, search, initialStoriesLimit],
     queryFn: () =>
       getArticles({
         limit: initialStoriesLimit,
-        topic: selectedTopic !== "for-you" ? selectedTopic : undefined,
+        topic: apiTopic,
         search: search || undefined,
       }),
     enabled: selectedTopic !== "for-you" || !meData?.user,
@@ -196,8 +266,10 @@ const Home = () => {
     () =>
       sortByPublishedTimeDesc(
         isActiveForYou ? forYouData?.items || [] : topData?.items || [],
+      ).filter((item) =>
+        selectedTopic === "local" ? isLocalStateMatch(item, userStateName) : true
       ),
-    [isActiveForYou, forYouData, topData],
+    [isActiveForYou, forYouData, topData, selectedTopic, userStateName],
   );
 
   const stories = useMemo(
@@ -232,6 +304,17 @@ const Home = () => {
       setCategorySwitching(false);
     }
   }, [isCategoryLoading]);
+
+  useEffect(() => {
+    const refreshStateFromStorage = () => setUserStateName(readStoredState());
+    refreshStateFromStorage();
+    window.addEventListener("ff:location-updated", refreshStateFromStorage);
+    window.addEventListener("focus", refreshStateFromStorage);
+    return () => {
+      window.removeEventListener("ff:location-updated", refreshStateFromStorage);
+      window.removeEventListener("focus", refreshStateFromStorage);
+    };
+  }, []);
 
   useEffect(() => {
     if (isActiveForYou) {
@@ -285,7 +368,7 @@ const Home = () => {
     const response = await getArticles({
       limit: 20,
       cursor: paginationCursor || undefined,
-      topic: selectedTopic !== "for-you" ? selectedTopic : undefined,
+      topic: apiTopic,
       search: search || undefined,
     });
     const incoming = response.items || [];

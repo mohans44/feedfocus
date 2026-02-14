@@ -257,6 +257,13 @@
     "allowedPaths": ["/cricket-news/"]
   },
   {
+    "name": "CREX",
+    "homepage": "https://crex.live",
+    "skipHomepage": true,
+    "sitemaps": ["https://crex.live/sitemap.xml"],
+    "allowedPaths": ["/articles/", "/news/", "/cricket-news/"]
+  },
+  {
     "name": "9to5Google",
     "homepage": "https://9to5google.com",
     "skipHomepage": true,
@@ -498,5 +505,231 @@
       { "url": "https://www.indiatoday.in/rss/1206515", "topic": "health" }
     ],
     "allowedPaths": ["/india/", "/world/", "/technology/", "/sports/", "/health/"]
+  },
+  {
+    "name": "Onmanorama",
+    "homepage": "https://www.onmanorama.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.onmanorama.com/sitemap.xml"],
+    "allowedPaths": ["/news/", "/kerala/", "/india/", "/business/", "/sports/", "/lifestyle/"]
+  },
+  {
+    "name": "The News Minute",
+    "homepage": "https://www.thenewsminute.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.thenewsminute.com/sitemap.xml"],
+    "allowedPaths": ["/kerala/", "/karnataka/", "/tamil-nadu/", "/andhra-pradesh/", "/telangana/", "/india/"]
+  },
+  {
+    "name": "DT Next",
+    "homepage": "https://www.dtnext.in",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.dtnext.in/sitemap.xml"],
+    "allowedPaths": ["/tamilnadu/", "/city/", "/news/", "/national/", "/world/", "/business/"]
+  },
+  {
+    "name": "The Hans India",
+    "homepage": "https://www.thehansindia.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.thehansindia.com/sitemap.xml"],
+    "allowedPaths": ["/telangana/", "/andhra-pradesh/", "/news/", "/business/", "/sports/", "/technology/"]
+  },
+  {
+    "name": "Deccan Chronicle",
+    "homepage": "https://www.deccanchronicle.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.deccanchronicle.com/sitemap.xml"],
+    "allowedPaths": ["/nation/", "/states/", "/business/", "/sports/", "/technology/", "/lifestyle/"]
+  },
+  {
+    "name": "Free Press Journal",
+    "homepage": "https://www.freepressjournal.in",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.freepressjournal.in/sitemap.xml"],
+    "allowedPaths": ["/mumbai/", "/bhopal/", "/indore/", "/india/", "/business/", "/sports/"]
+  },
+  {
+    "name": "Mid-Day",
+    "homepage": "https://www.mid-day.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.mid-day.com/sitemap.xml"],
+    "allowedPaths": ["/mumbai/", "/news/", "/sports/", "/lifestyle/", "/technology/"]
+  },
+  {
+    "name": "Odisha Bytes",
+    "homepage": "https://odishabytes.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://odishabytes.com/sitemap.xml"],
+    "allowedPaths": ["/odisha/", "/india/", "/sports/", "/business/", "/health/"]
+  },
+  {
+    "name": "The Sentinel Assam",
+    "homepage": "https://www.sentinelassam.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.sentinelassam.com/sitemap.xml"],
+    "allowedPaths": ["/north-east-india-news/", "/assam-news/", "/national-news/", "/international-news/", "/sports-news/"]
+  },
+  {
+    "name": "The Assam Tribune",
+    "homepage": "https://www.assamtribune.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.assamtribune.com/sitemap.xml"],
+    "allowedPaths": ["/state/", "/guwahati/", "/national/", "/business/", "/sports/", "/north-east/"]
+  },
+  {
+    "name": "Northeast Today",
+    "homepage": "https://www.northeasttoday.in",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.northeasttoday.in/sitemap.xml"],
+    "allowedPaths": ["/assam/", "/arunachal-pradesh/", "/manipur/", "/meghalaya/", "/mizoram/", "/nagaland/", "/tripura/", "/sikkim/"]
+  },
+  {
+    "name": "Kashmir Observer",
+    "homepage": "https://kashmirobserver.net",
+    "skipHomepage": true,
+    "sitemaps": ["https://kashmirobserver.net/sitemap_index.xml"],
+    "allowedPaths": ["/jammu-kashmir/", "/kashmir/", "/india/", "/sports/", "/business/"]
+  },
+  {
+    "name": "Daily Excelsior",
+    "homepage": "https://www.dailyexcelsior.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.dailyexcelsior.com/sitemap_index.xml"],
+    "allowedPaths": ["/jammu/", "/kashmir/", "/national/", "/sports/", "/business/"]
+  },
+  {
+    "name": "The Siasat Daily",
+    "homepage": "https://www.siasat.com",
+    "skipHomepage": true,
+    "sitemaps": ["https://www.siasat.com/sitemap.xml"],
+    "allowedPaths": ["/hyderabad/", "/telangana/", "/news/", "/india/", "/business/", "/technology/"]
+  },
+  {
+    "name": "Live Science",
+    "homepage": "https://www.livescience.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.livescience.com/feeds/all", "topic": "science" }
+    ],
+    "allowedPaths": ["/news/", "/health/", "/space/", "/planet-earth/"]
+  },
+  {
+    "name": "Phys.org",
+    "homepage": "https://phys.org",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://phys.org/rss-feed/", "topic": "science" }
+    ],
+    "allowedPaths": ["/news/", "/science-news/", "/technology-news/", "/earth-news/", "/space-news/"]
+  },
+  {
+    "name": "Nature",
+    "homepage": "https://www.nature.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.nature.com/nature.rss", "topic": "science" },
+      { "url": "https://www.nature.com/subjects/science.rss", "topic": "science" }
+    ],
+    "allowedPaths": ["/articles/", "/news/", "/subjects/"]
+  },
+  {
+    "name": "Science News",
+    "homepage": "https://www.sciencenews.org",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.sciencenews.org/feed", "topic": "science" }
+    ],
+    "allowedPaths": ["/article/", "/topic/", "/science-news/"]
+  },
+  {
+    "name": "MarketWatch",
+    "homepage": "https://www.marketwatch.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://feeds.content.dowjones.io/public/rss/mw_topstories", "topic": "business" },
+      { "url": "https://feeds.content.dowjones.io/public/rss/mw_marketpulse", "topic": "business" }
+    ],
+    "allowedPaths": ["/story/", "/investing/", "/economy-politics/", "/markets/"]
+  },
+  {
+    "name": "Entrepreneur",
+    "homepage": "https://www.entrepreneur.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.entrepreneur.com/latest.rss", "topic": "business" }
+    ],
+    "allowedPaths": ["/business-news/", "/starting-a-business/", "/growing-a-business/", "/leadership/"]
+  },
+  {
+    "name": "Inc.",
+    "homepage": "https://www.inc.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.inc.com/rss", "topic": "business" }
+    ],
+    "allowedPaths": ["/news/", "/leadership/", "/startup/", "/economy/"]
+  },
+  {
+    "name": "Vogue",
+    "homepage": "https://www.vogue.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.vogue.com/feed/rss", "topic": "fashion" }
+    ],
+    "allowedPaths": ["/article/", "/fashion/", "/beauty/", "/culture/"]
+  },
+  {
+    "name": "Harper's Bazaar",
+    "homepage": "https://www.harpersbazaar.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.harpersbazaar.com/rss/all.xml", "topic": "fashion" }
+    ],
+    "allowedPaths": ["/fashion/", "/beauty/", "/celebrity/", "/culture/"]
+  },
+  {
+    "name": "Eater",
+    "homepage": "https://www.eater.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.eater.com/rss/index.xml", "topic": "food" }
+    ],
+    "allowedPaths": ["/restaurants/", "/food-news/", "/guides/", "/travel/"]
+  },
+  {
+    "name": "Food & Wine",
+    "homepage": "https://www.foodandwine.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.foodandwine.com/syndication/rss", "topic": "food" }
+    ],
+    "allowedPaths": ["/news/", "/recipes/", "/travel/", "/drinks/"]
+  },
+  {
+    "name": "Condé Nast Traveler",
+    "homepage": "https://www.cntraveler.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.cntraveler.com/feed/rss", "topic": "travel" }
+    ],
+    "allowedPaths": ["/story/", "/gallery/", "/destination/", "/hotels/", "/restaurants/"]
+  },
+  {
+    "name": "Travel + Leisure",
+    "homepage": "https://www.travelandleisure.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://www.travelandleisure.com/syndication/rss", "topic": "travel" }
+    ],
+    "allowedPaths": ["/travel-news/", "/destination/", "/hotels-resorts/", "/trip-ideas/"]
+  },
+  {
+    "name": "Skift",
+    "homepage": "https://skift.com",
+    "skipHomepage": true,
+    "feeds": [
+      { "url": "https://skift.com/feed/", "topic": "travel" }
+    ],
+    "allowedPaths": ["/news/", "/category/", "/tourism/", "/airlines/", "/hotels/"]
   }
 ]

@@ -92,6 +92,7 @@ const Navbar = () => {
         if (temperature === undefined || weatherCode === undefined) return;
 
         let city = "";
+        let state = "";
         try {
           const reverseGeo = await fetchJsonWithTimeout(
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
@@ -101,6 +102,7 @@ const Navbar = () => {
             reverseGeo?.locality ||
             reverseGeo?.principalSubdivision ||
             "";
+          state = reverseGeo?.principalSubdivision || "";
         } catch {
           // keep empty city
         }
@@ -115,6 +117,21 @@ const Navbar = () => {
           temp: Math.round(temperature),
           code: weatherCode,
         });
+        try {
+          localStorage.setItem(
+            "ff_user_location",
+            JSON.stringify({
+              city,
+              state,
+              lat,
+              lon,
+              ts: Date.now(),
+            })
+          );
+        } catch {
+          // ignore storage failures
+        }
+        window.dispatchEvent(new Event("ff:location-updated"));
       } catch {
         if (!ignore) {
           setWeather(null);
