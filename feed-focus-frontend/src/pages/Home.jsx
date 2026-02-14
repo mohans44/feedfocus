@@ -577,6 +577,23 @@ const Home = () => {
   }, [autoLazyLoad, hasMore, paginationCursor, loadingMore, meData?.user]);
 
   useEffect(() => {
+    if (!meData?.user || loadingMore || !hasMore) return;
+    if (typeof window === "undefined") return;
+    const isMobile = window.matchMedia("(max-width: 767px)").matches;
+    if (!isMobile) return;
+    if (mobileCardIndex >= mobileStories.length - 3) {
+      loadMoreStories();
+    }
+  }, [
+    mobileCardIndex,
+    mobileStories.length,
+    hasMore,
+    loadingMore,
+    meData?.user,
+    paginationCursor,
+  ]);
+
+  useEffect(() => {
     const onScroll = () =>
       setShowGoTop(window.scrollY > 650 && extraItems.length > 0);
     onScroll();
