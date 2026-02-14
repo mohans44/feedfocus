@@ -3,38 +3,38 @@
 @tailwind utilities;
 
 :root {
-  --background: 165 24% 98%;
-  --foreground: 220 24% 14%;
+  --background: 0 0% 98%;
+  --foreground: 220 14% 8%;
   --card: 0 0% 100%;
-  --card-foreground: 220 24% 14%;
-  --muted: 164 20% 94%;
-  --muted-foreground: 220 12% 42%;
-  --accent: 171 55% 35%;
-  --accent-foreground: 0 0% 98%;
-  --border: 166 16% 86%;
-  --ring: 171 62% 40%;
-  --primary: 171 60% 36%;
+  --card-foreground: 220 14% 8%;
+  --muted: 0 0% 94%;
+  --muted-foreground: 220 8% 40%;
+  --accent: 0 84% 56%;
+  --accent-foreground: 0 0% 100%;
+  --border: 220 8% 86%;
+  --ring: 0 84% 56%;
+  --primary: 0 84% 56%;
   --primary-foreground: 0 0% 98%;
-  --radius: 18px;
+  --radius: 14px;
   --glass: 0 0% 100%;
-  --glass-alpha: 0.84;
+  --glass-alpha: 0.9;
 }
 
 .dark {
-  --background: 220 25% 10%;
-  --foreground: 210 20% 98%;
-  --card: 220 22% 13%;
-  --card-foreground: 210 20% 98%;
-  --muted: 220 15% 17%;
-  --muted-foreground: 216 10% 74%;
-  --accent: 171 66% 43%;
-  --accent-foreground: 220 25% 10%;
-  --border: 220 14% 25%;
-  --ring: 171 62% 48%;
-  --primary: 171 62% 46%;
-  --primary-foreground: 220 20% 10%;
-  --glass: 220 24% 13%;
-  --glass-alpha: 0.74;
+  --background: 220 14% 6%;
+  --foreground: 0 0% 97%;
+  --card: 220 12% 9%;
+  --card-foreground: 0 0% 97%;
+  --muted: 220 10% 13%;
+  --muted-foreground: 220 8% 74%;
+  --accent: 0 88% 60%;
+  --accent-foreground: 0 0% 100%;
+  --border: 220 8% 20%;
+  --ring: 0 88% 60%;
+  --primary: 0 88% 60%;
+  --primary-foreground: 0 0% 100%;
+  --glass: 220 12% 9%;
+  --glass-alpha: 0.86;
 }
 
 * {
@@ -44,17 +44,17 @@
 body {
   @apply bg-background text-foreground font-body antialiased;
   background-image:
-    radial-gradient(circle at 8% 0%, rgba(37, 167, 143, 0.14), transparent 38%),
-    radial-gradient(circle at 92% 10%, rgba(82, 191, 172, 0.1), transparent 42%),
-    linear-gradient(180deg, #f8fbfa 0%, #eff5f3 45%, #f8fbfa 100%);
+    radial-gradient(circle at 1px 1px, rgba(20, 23, 30, 0.09) 1px, transparent 0),
+    linear-gradient(180deg, #fbfbfc 0%, #f2f3f5 100%);
+  background-size: 14px 14px, 100% 100%;
   min-height: 100vh;
 }
 
 .dark body {
   background-image:
-    radial-gradient(circle at 18% 14%, rgba(56, 153, 137, 0.06), transparent 38%),
-    radial-gradient(circle at 84% 2%, rgba(33, 92, 90, 0.07), transparent 42%),
-    linear-gradient(180deg, #0e131a 0%, #111723 55%, #0d1218 100%);
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.09) 1px, transparent 0),
+    linear-gradient(180deg, #0d0f12 0%, #0a0c0f 100%);
+  background-size: 14px 14px, 100% 100%;
 }
 
 h1, h2, h3, h4 {
@@ -62,7 +62,7 @@ h1, h2, h3, h4 {
 }
 
 ::selection {
-  background: rgba(70, 200, 180, 0.35);
+  background: rgba(255, 68, 68, 0.35);
 }
 
 .scrollbar-none::-webkit-scrollbar {
@@ -71,9 +71,9 @@ h1, h2, h3, h4 {
 
 .glass {
   background: hsl(var(--glass) / var(--glass-alpha));
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(14px);
   border: 1px solid hsl(var(--border) / 0.9);
-  box-shadow: 0 14px 34px -24px rgba(15, 37, 33, 0.35);
+  box-shadow: 0 16px 42px -34px rgba(0, 0, 0, 0.5);
 }
 
 .feed-card {
@@ -90,8 +90,10 @@ h1, h2, h3, h4 {
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
-  background: transparent;
-  opacity: 0;
+  background:
+    linear-gradient(180deg, hsl(var(--foreground) / 0.035), transparent 38%),
+    linear-gradient(90deg, transparent 0, hsl(var(--foreground) / 0.018) 65%, transparent 100%);
+  opacity: 1;
 }
 
 @keyframes shimmer {
@@ -106,9 +108,9 @@ h1, h2, h3, h4 {
 .skeleton {
   background: linear-gradient(
     90deg,
-    hsl(var(--muted) / 0.65) 20%,
-    hsl(var(--card) / 0.85) 50%,
-    hsl(var(--muted) / 0.65) 80%
+    hsl(var(--muted) / 0.6) 20%,
+    hsl(var(--card) / 0.92) 50%,
+    hsl(var(--muted) / 0.6) 80%
   );
   background-size: 220% 100%;
   animation: shimmer 1.4s linear infinite;

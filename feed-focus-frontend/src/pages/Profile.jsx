@@ -37,6 +37,7 @@ const Profile = () => {
   const [activePanel, setActivePanel] = useState(null);
   const [aiLoadingId, setAiLoadingId] = useState(null);
   const [aiSummaryById, setAiSummaryById] = useState({});
+  const [openSummaryId, setOpenSummaryId] = useState(null);
   const [selectedPreferences, setSelectedPreferences] = useState([]);
 
   const { data: meData } = useQuery({
@@ -64,7 +65,9 @@ const Profile = () => {
 
   const togglePreference = (value) => {
     setSelectedPreferences((prev) =>
-      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value],
     );
   };
 
@@ -109,11 +112,13 @@ const Profile = () => {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 sm:space-y-5">
-      <section className="rounded-3xl border border-border/80 bg-card/70 p-4 sm:p-5">
+    <div className="space-y-3 sm:space-y-6">
+      <section className="rounded-xl border border-border/80 bg-card/80 p-3.5 sm:rounded-2xl sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold sm:text-3xl">Hi, {username}</h1>
+            <h1 className="text-2xl font-semibold sm:text-3xl">
+              Hi, {username.charAt(0).toUpperCase() + username.slice(1)}
+            </h1>
           </div>
           <Button
             variant="outline"
@@ -129,29 +134,33 @@ const Profile = () => {
           </Button>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2">
+        <div className="mt-5 grid grid-cols-2 gap-2 sm:gap-3">
+          <div className="rounded-xl border border-border/80 bg-background/72 px-3 py-2.5">
             <p className="text-xs text-muted-foreground">Bookmarks</p>
-            <p className="text-sm font-semibold">{bookmarks.length}</p>
+            <p className="text-base font-semibold">{bookmarks.length}</p>
           </div>
-          <div className="rounded-xl border border-border/70 bg-background/70 px-3 py-2">
+          <div className="rounded-xl border border-border/80 bg-background/72 px-3 py-2.5">
             <p className="text-xs text-muted-foreground">Preferences</p>
-            <p className="text-sm font-semibold">{preferences.length}</p>
+            <p className="text-base font-semibold">{preferences.length}</p>
           </div>
         </div>
       </section>
 
       {message ? (
-        <p className={`text-sm ${isErrorMessage ? "text-red-500" : "text-primary"}`}>{message}</p>
+        <p
+          className={`text-sm ${isErrorMessage ? "text-red-500" : "text-primary"}`}
+        >
+          {message}
+        </p>
       ) : null}
 
-      <section className="rounded-3xl border border-border/80 bg-card/70 p-4 sm:p-5">
+      <section className="rounded-xl border border-border/80 bg-card/80 p-3.5 sm:rounded-2xl sm:p-6">
         <h2 className="text-sm font-semibold sm:text-base">Manage Profile</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
             size="sm"
             variant={activePanel === "password" ? "default" : "outline"}
-            onClick={() => setActivePanel((prev) => (prev === "password" ? null : "password"))}
+            onClick={() => setActivePanel("password")}
           >
             Change password
           </Button>
@@ -160,7 +169,7 @@ const Profile = () => {
             variant={activePanel === "preferences" ? "default" : "outline"}
             onClick={() => {
               setSelectedPreferences(preferences);
-              setActivePanel((prev) => (prev === "preferences" ? null : "preferences"));
+              setActivePanel("preferences");
             }}
           >
             Edit preferences
@@ -168,8 +177,10 @@ const Profile = () => {
         </div>
 
         {activePanel === "password" ? (
-          <div className="mt-3 space-y-3 rounded-2xl border border-border/70 bg-background/60 p-3 sm:p-4">
-            <label className="text-xs font-medium text-muted-foreground">Change password</label>
+          <div className="mt-3 space-y-3 rounded-xl border border-border/80 bg-background/72 p-3 sm:p-4">
+            <label className="text-xs font-medium text-muted-foreground">
+              Change password
+            </label>
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -181,12 +192,18 @@ const Profile = () => {
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={saveProfile} disabled={savingProfile} className="w-full sm:w-auto">
+              <Button
+                size="sm"
+                onClick={saveProfile}
+                disabled={savingProfile}
+                className="w-auto"
+              >
                 {savingProfile ? "Saving..." : "Update password"}
               </Button>
               <Button
+                size="sm"
                 variant="outline"
-                className="w-full sm:w-auto"
+                className="w-auto"
                 onClick={() => {
                   setPassword("");
                   setActivePanel(null);
@@ -199,12 +216,14 @@ const Profile = () => {
         ) : null}
 
         {activePanel === "preferences" ? (
-          <div className="mt-3 rounded-2xl border border-border/70 bg-background/60 p-3 sm:p-4">
+          <div className="mt-3 rounded-xl border border-border/80 bg-background/72 p-3 sm:p-4">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold">Edit Preferences</h3>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">Choose your default topics.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Choose your default topics.
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
               Selected: {selectedPreferences.length} (minimum 4)
             </p>
@@ -229,15 +248,17 @@ const Profile = () => {
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-2">
               <Button
+                size="sm"
                 onClick={savePreferences}
                 disabled={savingPreferences || !hasMinPreferences}
-                className="w-full sm:w-auto"
+                className="w-auto"
               >
                 {savingPreferences ? "Saving..." : "Save preferences"}
               </Button>
               <Button
+                size="sm"
                 variant="outline"
-                className="w-full sm:w-auto"
+                className="w-auto"
                 onClick={() => {
                   setSelectedPreferences(preferences);
                   setActivePanel(null);
@@ -250,19 +271,25 @@ const Profile = () => {
         ) : null}
       </section>
 
-      <section className="rounded-3xl border border-border/80 bg-card/70 p-4 sm:p-5">
+      <section className="rounded-xl border border-border/80 bg-card/80 p-3.5 sm:rounded-2xl sm:p-6">
         <h2 className="text-sm font-semibold sm:text-base">Bookmarks</h2>
         {!bookmarks.length ? (
-          <p className="mt-2 text-sm text-muted-foreground">No bookmarks yet.</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            No bookmarks yet.
+          </p>
         ) : (
           <div className="mt-3 grid grid-cols-1 gap-3 sm:gap-4">
             {bookmarks.map((article, index) => (
               <article
                 key={`${article._id || article.url || article.title}-${index}`}
-                className="rounded-2xl border border-border/70 bg-background/70 p-3 sm:p-4"
+                className="rounded-xl border border-border/80 bg-background/75 p-3 sm:p-4"
               >
-                <h3 className="line-clamp-3 text-sm font-semibold sm:text-base">{article.title}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">{article.publisher}</p>
+                <h3 className="line-clamp-3 text-sm font-semibold sm:text-base">
+                  {article.title}
+                </h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {article.publisher}
+                </p>
 
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   {article.url ? (
@@ -278,37 +305,64 @@ const Profile = () => {
                   ) : null}
                   <button
                     type="button"
-                    className="rounded-full border border-primary/50 px-2.5 py-1 text-[11px] font-semibold text-primary transition hover:bg-primary/10 disabled:opacity-60"
+                    className="rounded-full border border-primary/60 bg-primary text-[11px] font-semibold text-primary-foreground px-2.5 py-1 transition hover:bg-primary/90 disabled:opacity-60"
                     disabled={aiLoadingId === article._id}
                     onClick={async () => {
-                      if (!article._id || (aiSummaryById[article._id] && !aiSummaryById[article._id].error)) {
+                      if (!article._id) {
+                        return;
+                      }
+                      if (openSummaryId === article._id) {
+                        setOpenSummaryId(null);
+                        return;
+                      }
+                      if (
+                        aiSummaryById[article._id] &&
+                        !aiSummaryById[article._id].error
+                      ) {
+                        setOpenSummaryId(article._id);
                         return;
                       }
                       setAiLoadingId(article._id);
                       const data = await getAiSummary(article._id);
-                      setAiSummaryById((prev) => ({ ...prev, [article._id]: data }));
+                      setAiSummaryById((prev) => ({
+                        ...prev,
+                        [article._id]: data,
+                      }));
                       setAiLoadingId(null);
+                      if (!data?.error) setOpenSummaryId(article._id);
                     }}
                   >
                     {aiLoadingId === article._id
                       ? "Generating..."
+                      : openSummaryId === article._id
+                        ? "Hide AI summary"
                       : aiSummaryById[article._id]?.error
                         ? "Retry AI summary"
                         : "Show AI summary"}
                   </button>
                 </div>
 
-                {article._id && aiSummaryById[article._id]?.summary ? (
-                  <div className="mt-2 rounded-xl border border-border/80 bg-card/60 p-3">
+                {article._id &&
+                openSummaryId === article._id &&
+                aiSummaryById[article._id]?.summary ? (
+                  <div className="mt-2 rounded-xl border border-border/85 bg-card/72 p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                      1-minute AI summary • {aiSummaryById[article._id].category || article.primaryCategory || "world"}
+                      1-minute AI summary •{" "}
+                      {aiSummaryById[article._id].category ||
+                        article.primaryCategory ||
+                        "world"}
                     </p>
-                    <p className="mt-1 text-sm text-muted-foreground">{aiSummaryById[article._id].summary}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {aiSummaryById[article._id].summary}
+                    </p>
                   </div>
                 ) : null}
 
                 {article._id && aiSummaryById[article._id]?.error ? (
-                  <p className="mt-2 text-xs text-red-500">Failed to load AI summary: {aiSummaryById[article._id].error}</p>
+                  <p className="mt-2 text-xs text-red-500">
+                    Failed to load AI summary:{" "}
+                    {aiSummaryById[article._id].error}
+                  </p>
                 ) : null}
               </article>
             ))}

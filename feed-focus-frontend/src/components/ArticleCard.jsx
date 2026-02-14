@@ -21,44 +21,48 @@ const formatCardDate = (value) => {
 };
 
 const ArticleCard = ({ article, actions = null }) => {
-  const fallbackImage = getCategoryPlaceholder(article.primaryCategory || article.topics?.[0] || "world");
+  const fallbackImage = getCategoryPlaceholder(
+    article.primaryCategory || article.topics?.[0] || "world",
+  );
   const imageUrl = article.imageUrl || fallbackImage;
 
   return (
-    <article className="top-sheen flex h-full flex-col overflow-hidden rounded-2xl border border-border/80 bg-card/80 p-3 shadow-[0_12px_28px_-24px_rgba(0,0,0,0.45)]">
+    <article className="flex h-full flex-col overflow-hidden rounded-lg border border-border/80 bg-background/75 p-2.5 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)] sm:rounded-xl sm:p-3">
       <img
         src={imageUrl}
         alt={article.title}
-        className="mb-3 aspect-[16/10] w-full rounded-xl border border-border/70 bg-black/5 object-contain"
+        className="mb-2.5 aspect-[16/9] w-full rounded-lg border border-border/70 bg-black/5 object-cover sm:mb-3 sm:rounded-xl"
         onError={(event) => {
           event.currentTarget.src = fallbackImage;
         }}
       />
 
-      <div className="text-xs text-muted-foreground">
-        {article.publisher}
-        {article.publishedAt ? <span> • {formatCardDate(article.publishedAt)}</span> : null}
-      </div>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="text-xs text-muted-foreground">
+          {article.publisher}
+          {article.publishedAt ? <span> • {formatCardDate(article.publishedAt)}</span> : null}
+        </div>
 
-      <h3 className="mt-2 line-clamp-3 text-sm font-semibold sm:text-base">{article.title}</h3>
+        <h3 className="mt-1 line-clamp-3 text-sm font-semibold leading-snug sm:mt-2 sm:text-base">{article.title}</h3>
 
-      {article.summary ? (
-        <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{toReadableSnippet(article.summary, 200)}</p>
-      ) : null}
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {article.url ? (
-          <a
-            href={article.url}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline sm:text-sm"
-          >
-            Read source
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+        {article.summary ? (
+          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground sm:mt-2 sm:line-clamp-3 sm:text-sm">{toReadableSnippet(article.summary, 200)}</p>
         ) : null}
-        {actions}
+
+        <div className="mt-auto pt-3 flex flex-wrap items-center gap-2">
+          {article.url ? (
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline sm:text-sm"
+            >
+              Read source
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          ) : null}
+          {actions}
+        </div>
       </div>
     </article>
   );

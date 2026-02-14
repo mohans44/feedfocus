@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   Bookmark,
-  UserCircle,
   Sun,
   Moon,
   CloudSun,
@@ -21,7 +20,9 @@ import { getMe } from "../utils/api";
 const Navbar = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") || searchParams.get("search") || "");
+  const [query, setQuery] = useState(
+    searchParams.get("q") || searchParams.get("search") || "",
+  );
   const { data: meData, isLoading: meLoading } = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
@@ -33,12 +34,20 @@ const Navbar = () => {
   const [theme, setTheme] = useState(() => {
     const stored = localStorage.getItem("theme");
     if (stored === "dark" || stored === "light") return stored;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
   });
   const [weather, setWeather] = useState(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const userInitial = String(
+    meData?.user?.username || meData?.user?.name || meData?.user?.email || "u",
+  )
+    .trim()
+    .charAt(0)
+    .toUpperCase();
 
   const fetchJsonWithTimeout = async (url, timeoutMs = 10000) => {
     const controller = new AbortController();
@@ -53,12 +62,18 @@ const Navbar = () => {
   };
 
   const getWeatherVisual = (code) => {
-    if ([0, 1].includes(code)) return { Icon: SunMedium, colorClass: "text-amber-500" };
-    if ([2, 3].includes(code)) return { Icon: CloudSun, colorClass: "text-cyan-500" };
-    if ([45, 48].includes(code)) return { Icon: CloudFog, colorClass: "text-slate-500" };
-    if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code)) return { Icon: CloudRain, colorClass: "text-sky-500" };
-    if ([66, 67, 71, 73, 75, 85, 86].includes(code)) return { Icon: CloudSnow, colorClass: "text-indigo-400" };
-    if ([95, 96, 99].includes(code)) return { Icon: CloudLightning, colorClass: "text-violet-500" };
+    if ([0, 1].includes(code))
+      return { Icon: SunMedium, colorClass: "text-amber-500" };
+    if ([2, 3].includes(code))
+      return { Icon: CloudSun, colorClass: "text-cyan-500" };
+    if ([45, 48].includes(code))
+      return { Icon: CloudFog, colorClass: "text-slate-500" };
+    if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(code))
+      return { Icon: CloudRain, colorClass: "text-sky-500" };
+    if ([66, 67, 71, 73, 75, 85, 86].includes(code))
+      return { Icon: CloudSnow, colorClass: "text-indigo-400" };
+    if ([95, 96, 99].includes(code))
+      return { Icon: CloudLightning, colorClass: "text-violet-500" };
     return { Icon: CloudSun, colorClass: "text-cyan-500" };
   };
 
@@ -84,7 +99,7 @@ const Navbar = () => {
         setWeatherLoading(true);
         setWeatherError(false);
         const weatherJson = await fetchJsonWithTimeout(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`,
         );
         if (ignore) return;
         const temperature = weatherJson?.current?.temperature_2m;
@@ -95,7 +110,7 @@ const Navbar = () => {
         let state = "";
         try {
           const reverseGeo = await fetchJsonWithTimeout(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
           );
           city =
             reverseGeo?.city ||
@@ -116,6 +131,8 @@ const Navbar = () => {
           city,
           temp: Math.round(temperature),
           code: weatherCode,
+          lat,
+          lon,
         });
         try {
           localStorage.setItem(
@@ -126,7 +143,7 @@ const Navbar = () => {
               lat,
               lon,
               ts: Date.now(),
-            })
+            }),
           );
         } catch {
           // ignore storage failures
@@ -167,14 +184,17 @@ const Navbar = () => {
       (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
-        localStorage.setItem("ff_weather_coords", JSON.stringify({ lat, lon, ts: Date.now() }));
+        localStorage.setItem(
+          "ff_weather_coords",
+          JSON.stringify({ lat, lon, ts: Date.now() }),
+        );
         fetchWeather(lat, lon);
       },
       () => {
         setWeatherLoading(false);
         setWeatherError(true);
       },
-      { timeout: 10000, maximumAge: 30 * 60 * 1000 }
+      { timeout: 10000, maximumAge: 30 * 60 * 1000 },
     );
 
     return () => {
@@ -197,31 +217,47 @@ const Navbar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/70 backdrop-blur-lg">
-      <div className="container flex h-14 items-center justify-between gap-2 sm:h-16 sm:gap-3">
-        <button
-          type="button"
-          className="flex items-center gap-3 rounded-full px-1 py-1"
-          onClick={() => navigate("/")}
-        >
-          <span className="font-display text-lg font-semibold tracking-tight sm:text-xl">
-            feedfocus
-          </span>
+    <header className="sticky top-0 z-40 w-full border-b border-border/85 bg-background/96 shadow-[0_10px_22px_-20px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+      <div className="container flex h-12 items-center justify-between gap-1.5 sm:h-16 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            className="rounded-full px-1 py-1"
+            onClick={() => navigate("/")}
+          >
+            <span className="font-display text-base font-semibold tracking-[0.08em] sm:text-xl">
+              feedfocus
+            </span>
+          </button>
           {isLoggedIn && (weather || weatherLoading || weatherError) ? (
-            <span className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/70 px-2 py-1 text-[11px] text-muted-foreground sm:px-2.5 sm:text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                if (!weather?.lat || !weather?.lon) return;
+                window.open(
+                  `https://www.weather.com/weather/today/l/${weather.lat},${weather.lon}`,
+                  "_blank",
+                  "noopener,noreferrer",
+                );
+              }}
+              className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/70 px-1.5 py-0.5 text-[10px] text-muted-foreground sm:px-2.5 sm:py-1 sm:text-xs"
+              aria-label="Open weather details"
+              disabled={!weather?.lat || !weather?.lon}
+            >
               {(() => {
                 const { Icon, colorClass } = getWeatherVisual(weather?.code);
                 return <Icon className={`h-3.5 w-3.5 ${colorClass}`} />;
               })()}
               <span className="hidden max-w-[120px] truncate sm:inline">
-                {weather?.city || (weatherLoading ? "Locating..." : "Weather unavailable")}
+                {weather?.city ||
+                  (weatherLoading ? "Locating..." : "Weather unavailable")}
               </span>
               <span className="font-semibold text-foreground">
                 {weather ? `${weather.temp}°C` : weatherLoading ? "..." : "--"}
               </span>
-            </span>
+            </button>
           ) : null}
-        </button>
+        </div>
 
         {isLoggedIn ? (
           <form
@@ -232,7 +268,7 @@ const Navbar = () => {
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search trusted news, topics, or publishers"
-                className="h-10 border-border/80 bg-card/75 pl-11"
+                className="h-9 border-border/80 bg-card/75 pl-11"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
@@ -252,7 +288,7 @@ const Navbar = () => {
               className="md:hidden"
               onClick={() => setShowMobileSearch((prev) => !prev)}
             >
-              <Search className="h-5 w-5" />
+              <Search className="h-[18px] w-[18px]" />
             </Button>
           ) : null}
           <Button
@@ -263,9 +299,9 @@ const Navbar = () => {
             onClick={toggleTheme}
           >
             {theme === "dark" ? (
-              <Sun className="h-5 w-5" />
+              <Sun className="h-[20px] w-[20px]" />
             ) : (
-              <Moon className="h-5 w-5" />
+              <Moon className="h-[20px] w-[20px]" />
             )}
           </Button>
           <Button
@@ -276,7 +312,7 @@ const Navbar = () => {
             onClick={() => navigate(isLoggedIn ? "/bookmarks" : "/auth")}
             disabled={!isAuthResolved}
           >
-            <Bookmark className="h-5 w-5" />
+            <Bookmark className="h-[20px] w-[20px]" />
           </Button>
           {isLoggedIn ? (
             <Button
@@ -285,8 +321,9 @@ const Navbar = () => {
               type="button"
               aria-label="Profile"
               onClick={() => navigate("/profile")}
+              className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 sm:h-6 sm:w-6"
             >
-              <UserCircle className="h-6 w-6" />
+              <span className="text-sm font-black">{userInitial}</span>
             </Button>
           ) : null}
           {!isLoggedIn && isAuthResolved ? (
@@ -305,12 +342,12 @@ const Navbar = () => {
         </div>
       </div>
       {isLoggedIn && showMobileSearch ? (
-        <form className="container pb-3 md:hidden" onSubmit={submitSearch}>
+        <form className="container pb-2.5 md:hidden" onSubmit={submitSearch}>
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search trusted news, topics, or publishers"
-              className="h-10 border-border/80 bg-card/75 pl-11"
+              className="h-9 border-border/80 bg-card/75 pl-11"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />

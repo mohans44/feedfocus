@@ -12,7 +12,6 @@ import {
   ChevronRight,
   Clapperboard,
   Cpu,
-  ExternalLink,
   Flag,
   Globe,
   MapPin,
@@ -26,6 +25,7 @@ import {
 } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
+import ArticleCard from "../components/ArticleCard";
 import {
   addBookmark,
   getAiSummary,
@@ -59,24 +59,6 @@ const sortByPublishedTimeDesc = (items = []) =>
     const bTime = new Date(b?.publishedAt || 0).getTime();
     return bTime - aTime;
   });
-const toReadableSnippet = (text = "", limit = 210) => {
-  const cleaned = String(text || "").replace(/\s+/g, " ").trim();
-  if (!cleaned) return "";
-  if (cleaned.length <= limit) return cleaned;
-  const cut = cleaned.slice(0, limit);
-  const safe = cut.slice(0, Math.max(cut.lastIndexOf(" "), 0)).trim();
-  return `${safe || cut}...`;
-};
-const formatCardDate = (value) => {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-};
 
 const readStoredState = () => {
   if (typeof window === "undefined") return "";
@@ -138,7 +120,13 @@ const isLocalStateMatch = (article = {}, stateName = "") => {
   return keywords.some((keyword) => haystack.includes(keyword));
 };
 
-const BannerCard = ({ article, isBookmarked, onToggleBookmark }) => {
+const BannerCard = ({
+  article,
+  isBookmarked,
+  onToggleBookmark,
+  onShowSummary,
+  summaryBusy = false,
+}) => {
   const fallbackImage = getCategoryPlaceholder(
     article.primaryCategory || article.topics?.[0] || "world",
   );
@@ -164,16 +152,16 @@ const BannerCard = ({ article, isBookmarked, onToggleBookmark }) => {
       <img
         src={imageUrl}
         alt={article.title}
-        className="relative z-[1] h-[220px] w-full bg-black/10 object-contain sm:h-[340px] lg:h-[460px]"
+        className="relative z-[1] h-[220px] w-full bg-black/10 object-cover sm:h-[340px] sm:object-contain lg:h-[460px]"
         onError={(event) => {
           event.currentTarget.src = fallbackImage;
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/80 to-black/55" />
+      <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/95 via-black/82 to-black/68" />
       <button
         type="button"
         aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-        className="absolute right-3 top-3 z-[3] rounded-full border border-white/25 bg-black/60 p-2 text-white backdrop-blur-md transition hover:bg-black/75"
+        className="absolute right-3 top-3 z-[4] rounded-full border border-white/25 bg-black/64 p-2 text-white backdrop-blur-md transition hover:bg-black/78"
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -182,7 +170,20 @@ const BannerCard = ({ article, isBookmarked, onToggleBookmark }) => {
       >
         {isBookmarked ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
       </button>
-      <div className="absolute bottom-0 left-0 right-0 z-[2] border-t border-white/10 bg-black/74 p-3 backdrop-blur-xl sm:p-4">
+      <button
+        type="button"
+        aria-label="Show AI summary"
+        className="absolute bottom-3 right-3 z-[4] rounded-full border border-primary/70 bg-primary p-2 text-primary-foreground shadow-[0_10px_20px_-16px_hsl(var(--primary))] backdrop-blur-md transition hover:bg-primary/90 disabled:opacity-60"
+        disabled={summaryBusy}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onShowSummary?.(article);
+        }}
+      >
+        <Sparkles className="h-4 w-4" />
+      </button>
+      <div className="absolute bottom-0 left-0 right-0 z-[3] border-t border-white/10 bg-black/84 p-2.5 backdrop-blur-xl sm:p-4">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/75 sm:text-xs">
           {article.publisher || "Source"}
         </p>
@@ -202,7 +203,8 @@ const Home = () => {
   const search = searchParams.get("q") || searchParams.get("search") || "";
 
   const [bookmarkBusyId, setBookmarkBusyId] = useState(null);
-  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [carouselTrackIndex, setCarouselTrackIndex] = useState(1);
+  const [carouselAnimating, setCarouselAnimating] = useState(true);
   const [aiLoadingId, setAiLoadingId] = useState(null);
   const [aiSummaryById, setAiSummaryById] = useState({});
   const [activeSummaryArticle, setActiveSummaryArticle] = useState(null);
@@ -277,6 +279,15 @@ const Home = () => {
     [baseStories, extraItems],
   );
   const carouselStories = useMemo(() => baseStories.slice(0, 6), [baseStories]);
+  const carouselSlides = useMemo(() => {
+    if (!carouselStories.length) return [];
+    if (carouselStories.length === 1) return carouselStories;
+    return [
+      carouselStories[carouselStories.length - 1],
+      ...carouselStories,
+      carouselStories[0],
+    ];
+  }, [carouselStories]);
   const textStories = useMemo(() => {
     const items = stories.slice(carouselStories.length);
     if (meData?.user) return items;
@@ -287,7 +298,8 @@ const Home = () => {
 
   useEffect(() => {
     setCategorySwitching(true);
-    setCarouselIndex(0);
+    setCarouselTrackIndex(1);
+    setCarouselAnimating(true);
     setAiSummaryById({});
     setAiLoadingId(null);
     setActiveSummaryArticle(null);
@@ -334,18 +346,50 @@ const Home = () => {
   useEffect(() => {
     if (carouselStories.length <= 1) return undefined;
     const timer = setInterval(() => {
-      setCarouselIndex((prev) => (prev + 1) % carouselStories.length);
-    }, 3500);
+      setCarouselTrackIndex((prev) => prev + 1);
+    }, 10000);
     return () => clearInterval(timer);
   }, [carouselStories.length]);
 
   useEffect(() => {
-    if (!carouselStories.length) {
-      setCarouselIndex(0);
+    if (!carouselStories.length) return;
+    setCarouselAnimating(true);
+    setCarouselTrackIndex(carouselStories.length > 1 ? 1 : 0);
+  }, [carouselStories.length]);
+
+  useEffect(() => {
+    if (carouselStories.length <= 1) return;
+    if (carouselTrackIndex < 0 || carouselTrackIndex > carouselStories.length + 1) {
+      const normalized =
+        ((((carouselTrackIndex - 1) % carouselStories.length) + carouselStories.length) %
+          carouselStories.length) +
+        1;
+      setCarouselAnimating(false);
+      setCarouselTrackIndex(normalized);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setCarouselAnimating(true));
+      });
+    }
+  }, [carouselTrackIndex, carouselStories.length]);
+
+  const onCarouselTransitionEnd = () => {
+    if (carouselStories.length <= 1) return;
+    if (carouselTrackIndex <= 0) {
+      setCarouselAnimating(false);
+      setCarouselTrackIndex(carouselStories.length);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setCarouselAnimating(true));
+      });
       return;
     }
-    setCarouselIndex((prev) => prev % carouselStories.length);
-  }, [carouselStories.length]);
+    if (carouselTrackIndex >= carouselStories.length + 1) {
+      setCarouselAnimating(false);
+      setCarouselTrackIndex(1);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setCarouselAnimating(true));
+      });
+    }
+  };
 
   const onBookmark = async (article) => {
     if (!meData?.user) {
@@ -412,17 +456,26 @@ const Home = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, [extraItems.length]);
 
+  useEffect(() => {
+    if (!activeSummaryArticle?._id) return undefined;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [activeSummaryArticle?._id]);
+
   return (
-    <div className="space-y-6 sm:space-y-10">
+    <div className="space-y-3 sm:space-y-10">
       {!meData?.user ? (
-        <section className="glass top-sheen rounded-[32px] p-6 shadow-soft sm:p-8">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-wrap items-center gap-3">
+        <section className="glass top-sheen rounded-2xl p-4 shadow-soft sm:rounded-[32px] sm:p-8">
+          <div className="flex flex-col gap-4 sm:gap-6">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <Badge variant="glow">AI Curated</Badge>
               <Badge>Reliable publishers</Badge>
               <Badge>Focus mode feed</Badge>
             </div>
-            <h1 className="text-3xl sm:text-5xl">
+            <h1 className="text-2xl sm:text-5xl">
               Read less noise. Track more signal.
             </h1>
             <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
@@ -442,17 +495,18 @@ const Home = () => {
       ) : null}
 
       <section className="space-y-2 sm:space-y-4">
-        <div className="scrollbar-none flex gap-2 overflow-x-auto pb-1.5 sm:gap-3 sm:pb-2">
+        <div className="scrollbar-none -mx-0.5 flex snap-x gap-1.5 overflow-x-auto pb-1 pl-0.5 pr-0.5 sm:mx-0 sm:gap-3 sm:pb-2 sm:pl-0 sm:pr-0">
           {categories.map((category) => (
             <button
               key={category.value}
               type="button"
-              className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm ${
+              className={`snap-start whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm ${
                 category.value === selectedTopic
-                  ? "border-accent/55 bg-accent text-accent-foreground shadow-[0_8px_20px_-16px_hsl(var(--accent))]"
-                  : "border-border/90 bg-card/70 text-foreground hover:bg-muted/70"
+                  ? "border-accent bg-accent text-accent-foreground shadow-[0_10px_22px_-18px_hsl(var(--accent))]"
+                  : "border-border bg-card text-foreground hover:bg-muted"
               }`}
               onClick={() => {
+                if (category.value === selectedTopic) return;
                 setCategorySwitching(true);
                 const next = new URLSearchParams(searchParams);
                 if (category.value === "for-you") next.delete("topic");
@@ -482,12 +536,13 @@ const Home = () => {
         ) : null}
 
         {!showInitialLoading && carouselStories.length ? (
-          <div className="relative overflow-hidden rounded-3xl">
+          <div className="relative overflow-hidden rounded-xl sm:rounded-3xl">
             <div
-              className="flex will-change-transform transition-transform duration-700 ease-out"
-              style={{ transform: `translateX(-${carouselIndex * 100}%)` }}
+              className={`flex will-change-transform ${carouselAnimating ? "transition-transform duration-700 ease-out" : "transition-none"}`}
+              style={{ transform: `translateX(-${carouselTrackIndex * 100}%)` }}
+              onTransitionEnd={onCarouselTransitionEnd}
             >
-              {carouselStories.map((article, index) => {
+              {carouselSlides.map((article, index) => {
                 const key = article._id || article.url || article.title;
                 const isBookmarked = carouselBookmarkSet.has(key);
                 return (
@@ -498,6 +553,7 @@ const Home = () => {
                   <BannerCard
                     article={article}
                     isBookmarked={isBookmarked}
+                    summaryBusy={aiLoadingId === article._id}
                     onToggleBookmark={(selectedArticle) => {
                       const bookmarkKey =
                         selectedArticle._id || selectedArticle.url || selectedArticle.title;
@@ -507,6 +563,31 @@ const Home = () => {
                         else next.add(bookmarkKey);
                         return next;
                       });
+                    }}
+                    onShowSummary={async (selectedArticle) => {
+                      if (!meData?.user) {
+                        navigate("/auth");
+                        return;
+                      }
+                      const articleId = selectedArticle?._id;
+                      if (!articleId) return;
+                      if (
+                        aiSummaryById[articleId] &&
+                        !aiSummaryById[articleId].error
+                      ) {
+                        setActiveSummaryArticle(selectedArticle);
+                        return;
+                      }
+                      setAiLoadingId(articleId);
+                      const data = await getAiSummary(articleId);
+                      setAiSummaryById((prev) => ({
+                        ...prev,
+                        [articleId]: data,
+                      }));
+                      setAiLoadingId(null);
+                      if (!data?.error) {
+                        setActiveSummaryArticle(selectedArticle);
+                      }
                     }}
                   />
                 </div>
@@ -518,22 +599,18 @@ const Home = () => {
                 <button
                   type="button"
                   aria-label="Previous slide"
-                  onClick={() =>
-                    setCarouselIndex((prev) => (prev - 1 + carouselStories.length) % carouselStories.length)
-                  }
-                  className="absolute left-3 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/20 bg-black/32 p-2 text-white backdrop-blur-md transition hover:bg-black/48"
+                  onClick={() => setCarouselTrackIndex((prev) => prev - 1)}
+                  className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/20 bg-black/38 p-1.5 text-white backdrop-blur-md transition hover:bg-black/55 sm:left-3 sm:p-2"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
                 <button
                   type="button"
                   aria-label="Next slide"
-                  onClick={() =>
-                    setCarouselIndex((prev) => (prev + 1) % carouselStories.length)
-                  }
-                  className="absolute right-3 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/20 bg-black/32 p-2 text-white backdrop-blur-md transition hover:bg-black/48"
+                  onClick={() => setCarouselTrackIndex((prev) => prev + 1)}
+                  className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/20 bg-black/38 p-1.5 text-white backdrop-blur-md transition hover:bg-black/55 sm:right-3 sm:p-2"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
               </>
             ) : null}
@@ -541,7 +618,7 @@ const Home = () => {
         ) : null}
 
         {!showInitialLoading && textStories.length ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {textStories.map((article, index) => {
                 const articleId = article._id;
                 const isBookmarked = articleId
@@ -550,125 +627,70 @@ const Home = () => {
                 const isBusy = bookmarkBusyId === articleId;
                 const aiPayload = articleId ? aiSummaryById[articleId] : null;
                 const isSummaryOpen = activeSummaryArticle?._id === articleId;
-                const fallbackImage = getCategoryPlaceholder(
-                  article.primaryCategory || article.topics?.[0] || "world",
-                );
-                const imageUrl = article.imageUrl || fallbackImage;
 
                 return (
-                  <article
+                  <ArticleCard
                     key={`${article._id || article.url || article.title}-${index}`}
-                    className="top-sheen flex h-full flex-col rounded-xl border border-border/80 bg-card/85 p-3 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)] sm:rounded-2xl sm:p-3.5"
-                  >
-                    <img
-                      src={imageUrl}
-                      alt={article.title}
-                      className="mb-3 aspect-[16/10] w-full rounded-xl border border-border/70 bg-black/5 object-contain"
-                      onError={(event) => {
-                        event.currentTarget.src = fallbackImage;
-                      }}
-                    />
-
-                    <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground sm:text-xs">
-                      <div className="min-w-0">
-                        <p className="truncate">
-                          {article.publisher || article.source}
-                        </p>
-                        {article.publishedAt ? (
-                          <p className="hidden truncate sm:block">
-                            {formatCardDate(article.publishedAt)}
+                    article={article}
+                    actions={
+                      <div className="flex w-full flex-wrap gap-1.5 sm:gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
+                          onClick={() => onBookmark(article)}
+                          disabled={isBusy || !articleId}
+                        >
+                          {isBookmarked ? (
+                            <BookmarkCheck className="h-4 w-4 text-primary" />
+                          ) : (
+                            <Bookmark className="h-4 w-4" />
+                          )}
+                          {isBookmarked ? "Bookmarked" : "Bookmark"}
+                        </Button>
+                        {articleId && meData?.user ? (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            disabled={aiLoadingId === articleId}
+                            onClick={async () => {
+                              if (isSummaryOpen) {
+                                setActiveSummaryArticle(null);
+                                return;
+                              }
+                              if (
+                                !aiSummaryById[articleId] ||
+                                aiSummaryById[articleId].error
+                              ) {
+                                setAiLoadingId(articleId);
+                                const data = await getAiSummary(articleId);
+                                setAiSummaryById((prev) => ({
+                                  ...prev,
+                                  [articleId]: data,
+                                }));
+                                setAiLoadingId(null);
+                              }
+                              setActiveSummaryArticle(article);
+                            }}
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            {aiLoadingId === articleId
+                              ? "Generating..."
+                              : isSummaryOpen
+                                ? "Hide AI summary"
+                                : aiPayload?.error
+                                ? "Retry AI summary"
+                                : "Show AI summary"}
+                          </Button>
+                        ) : null}
+                        {aiPayload?.error ? (
+                          <p className="w-full text-xs text-red-500">
+                            Failed to load AI summary: {aiPayload.error}
                           </p>
                         ) : null}
                       </div>
-                      <button
-                        type="button"
-                        className="rounded-full p-1.5 transition hover:bg-muted"
-                        aria-label={
-                          isBookmarked ? "Remove bookmark" : "Add bookmark"
-                        }
-                        onClick={() => onBookmark(article)}
-                        disabled={isBusy || !articleId}
-                      >
-                        {isBookmarked ? (
-                          <BookmarkCheck className="h-4 w-4 text-primary" />
-                        ) : (
-                          <Bookmark className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-
-                    <h3 className="mt-1.5 line-clamp-3 text-sm font-semibold sm:mt-2 sm:text-base">
-                      {article.title}
-                    </h3>
-
-                    {article.summary ? (
-                      <p className="mt-1.5 hidden line-clamp-2 text-xs text-muted-foreground sm:mt-2 sm:block sm:line-clamp-3 sm:text-sm">
-                        {toReadableSnippet(article.summary, 190)}
-                      </p>
-                    ) : null}
-
-                    <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:mt-3 sm:gap-3">
-                      {article.url ? (
-                        <a
-                          href={article.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline sm:text-sm"
-                        >
-                          <span className="sm:hidden">Source</span>
-                          <span className="hidden sm:inline">
-                            Read original source
-                          </span>
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                      ) : null}
-                      {articleId && meData?.user ? (
-                        <button
-                          type="button"
-                          className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold transition sm:px-3 sm:py-1.5 sm:text-xs ${
-                            isSummaryOpen
-                              ? "border-primary/60 bg-primary text-primary-foreground"
-                              : "border-primary/55 bg-primary/90 text-primary-foreground hover:bg-primary"
-                          }`}
-                          disabled={aiLoadingId === articleId}
-                          onClick={async () => {
-                            if (isSummaryOpen) {
-                              setActiveSummaryArticle(null);
-                              return;
-                            }
-                            if (
-                              !aiSummaryById[articleId] ||
-                              aiSummaryById[articleId].error
-                            ) {
-                              setAiLoadingId(articleId);
-                              const data = await getAiSummary(articleId);
-                              setAiSummaryById((prev) => ({
-                                ...prev,
-                                [articleId]: data,
-                              }));
-                              setAiLoadingId(null);
-                            }
-                            setActiveSummaryArticle(article);
-                          }}
-                        >
-                          <Sparkles className="h-3.5 w-3.5" />
-                          {aiLoadingId === articleId
-                            ? "Generating..."
-                            : isSummaryOpen
-                              ? "Hide AI summary"
-                              : aiPayload?.error
-                                ? "Retry AI summary"
-                                : "Show AI summary"}
-                        </button>
-                      ) : null}
-                    </div>
-
-                    {aiPayload?.error ? (
-                      <p className="text-xs text-red-500">
-                        Failed to load AI summary: {aiPayload.error}
-                      </p>
-                    ) : null}
-                  </article>
+                    }
+                  />
                 );
               })}
           </div>
@@ -710,7 +732,7 @@ const Home = () => {
           type="button"
           aria-label="Go to top"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-24 right-4 z-50 inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-soft backdrop-blur-md transition hover:bg-muted sm:bottom-28 sm:right-6 sm:h-11 sm:w-11"
+          className="fixed bottom-20 right-4 z-50 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-soft backdrop-blur-md transition hover:bg-muted sm:bottom-28 sm:right-6 sm:h-11 sm:w-11"
         >
           <ArrowUp className="h-4 w-4" />
         </button>
@@ -718,46 +740,52 @@ const Home = () => {
 
       {activeSummaryArticle?._id &&
       aiSummaryById[activeSummaryArticle._id]?.summary ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 p-0 backdrop-blur-sm sm:items-center sm:p-4">
-          <div className="top-sheen w-full max-h-[86vh] overflow-y-auto rounded-t-3xl border border-border/80 bg-card p-4 shadow-soft sm:max-h-[80vh] sm:max-w-2xl sm:rounded-3xl sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  1-minute AI summary •{" "}
-                  {aiSummaryById[activeSummaryArticle._id]?.category ||
-                    activeSummaryArticle.primaryCategory ||
-                    "world"}
-                </p>
-                <h3 className="mt-1 text-base font-semibold sm:text-lg">
-                  {activeSummaryArticle.title}
-                </h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {activeSummaryArticle.publisher || "Source"}
-                </p>
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm sm:hidden"
+            onClick={() => setActiveSummaryArticle(null)}
+          />
+          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex items-end justify-center p-0 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[460px] sm:max-w-[94vw] sm:p-0">
+            <div className="pointer-events-auto w-full max-h-[84vh] overflow-y-auto rounded-t-3xl border border-border/90 bg-background p-4 shadow-soft sm:max-h-[72vh] sm:rounded-2xl sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary sm:text-[11px]">
+                    1-minute AI summary •{" "}
+                    {aiSummaryById[activeSummaryArticle._id]?.category ||
+                      activeSummaryArticle.primaryCategory ||
+                      "world"}
+                  </p>
+                  <h3 className="mt-1 text-sm font-semibold text-foreground sm:text-base">
+                    {activeSummaryArticle.title}
+                  </h3>
+                  <p className="mt-1 text-xs text-foreground/75">
+                    {activeSummaryArticle.publisher || "Source"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close summary"
+                  className="rounded-full border border-border/80 p-2 text-muted-foreground transition hover:bg-muted"
+                  onClick={() => setActiveSummaryArticle(null)}
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                aria-label="Close summary"
-                className="rounded-full border border-border/80 p-2 text-muted-foreground transition hover:bg-muted"
-                onClick={() => setActiveSummaryArticle(null)}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              {aiSummaryById[activeSummaryArticle._id]?.summary}
-            </p>
-            <div className="mt-5 flex justify-end sm:hidden">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setActiveSummaryArticle(null)}
-              >
-                Close
-              </Button>
+              <p className="mt-3 text-sm leading-6 text-foreground/92">
+                {aiSummaryById[activeSummaryArticle._id]?.summary}
+              </p>
+              <div className="mt-4 flex justify-end sm:hidden">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveSummaryArticle(null)}
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       ) : null}
     </div>
   );
