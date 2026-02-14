@@ -622,7 +622,7 @@ const Home = () => {
                           <ExternalLink className="h-3.5 w-3.5" />
                         </a>
                       ) : null}
-                      {articleId ? (
+                      {articleId && meData?.user ? (
                         <button
                           type="button"
                           className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-semibold transition sm:px-3 sm:py-1.5 sm:text-xs ${

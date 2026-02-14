@@ -8,6 +8,10 @@ const userSchema = new mongoose.Schema(
     preferences: { type: [String], default: [] },
     bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Article" }],
     lastLogin: { type: Date },
+    aiSummaryUsage: {
+      dateKey: { type: String, default: "" }, // UTC YYYY-MM-DD
+      count: { type: Number, default: 0 },
+    },
   },
   { timestamps: true }
 );

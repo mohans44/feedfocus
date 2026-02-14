@@ -30,3 +30,6 @@ Optional env vars:
 - `COOKIE_SAMESITE`
 - `COOKIE_SECURE`
 - `PORT`
+- `GEMINI_API_KEY` (required for real AI summaries)
+- `GEMINI_MODEL` (default: `gemini-1.5-flash`)
+- `AI_SUMMARY_DAILY_LIMIT` (default: `15`)

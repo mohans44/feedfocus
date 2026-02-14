@@ -1,5 +1,7 @@
 import express from "express";
 import { Article } from "../models/Article.js";
+import { User } from "../models/User.js";
+import { authRequired } from "../middleware/auth.js";
 import {
   enrichArticleTopics,
   isArticleInTopic,
@@ -9,6 +11,9 @@ import {
 
 const router = express.Router();
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+const AI_SUMMARY_DAILY_LIMIT = Number(process.env.AI_SUMMARY_DAILY_LIMIT || 15);
 
 const summarizeText = (content = "", maxSentences = 4) => {
   const clean = String(content).replace(/\s+/g, " ").trim();
@@ -37,22 +42,154 @@ const summarizeText = (content = "", maxSentences = 4) => {
     .map((item) => item.sentence);
 };
 
-const buildAiSummary = (article) => {
+const utcDateKey = () => new Date().toISOString().slice(0, 10);
+
+const consumeAiSummaryQuota = async (userId) => {
+  const today = utcDateKey();
+  const incExisting = await User.updateOne(
+    {
+      _id: userId,
+      "aiSummaryUsage.dateKey": today,
+      "aiSummaryUsage.count": { $lt: AI_SUMMARY_DAILY_LIMIT },
+    },
+    { $inc: { "aiSummaryUsage.count": 1 } }
+  );
+  if (incExisting.modifiedCount === 1) {
+    const current = await User.findById(userId).select("aiSummaryUsage");
+    return {
+      allowed: true,
+      remaining: Math.max(0, AI_SUMMARY_DAILY_LIMIT - (current?.aiSummaryUsage?.count || 0)),
+    };
+  }
+
+  const resetForToday = await User.updateOne(
+    {
+      _id: userId,
+      $or: [
+        { "aiSummaryUsage.dateKey": { $exists: false } },
+        { "aiSummaryUsage.dateKey": { $ne: today } },
+      ],
+    },
+    {
+      $set: {
+        "aiSummaryUsage.dateKey": today,
+        "aiSummaryUsage.count": 1,
+      },
+    }
+  );
+  if (resetForToday.modifiedCount === 1) {
+    return {
+      allowed: true,
+      remaining: AI_SUMMARY_DAILY_LIMIT - 1,
+    };
+  }
+
+  const current = await User.findById(userId).select("aiSummaryUsage");
+  const used = current?.aiSummaryUsage?.dateKey === today ? current.aiSummaryUsage.count || 0 : 0;
+  return {
+    allowed: false,
+    remaining: Math.max(0, AI_SUMMARY_DAILY_LIMIT - used),
+  };
+};
+
+const parseModelJson = (raw = "") => {
+  const text = String(raw || "").trim();
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      return null;
+    }
+  }
+};
+
+const buildAiPrompt = (article) => {
+  const content = String(article.content || article.summary || "").slice(0, 8000);
+  return [
+    "You summarize news into a concise 1-minute brief.",
+    "Return STRICT JSON with keys: summary, keyPoints, category.",
+    "Rules:",
+    "- summary: 90-140 words, neutral, factual, no hype.",
+    "- keyPoints: array with 3 to 5 short bullets.",
+    "- category: one of india, world, technology, business, health, science, sports, culture, fashion, food, travel, politics.",
+    "- Do not mention missing information.",
+    "",
+    `Title: ${article.title || ""}`,
+    `Publisher: ${article.publisher || ""}`,
+    `PublishedAt: ${article.publishedAt ? new Date(article.publishedAt).toISOString() : ""}`,
+    `Source URL: ${article.url || ""}`,
+    `Article Text: ${content}`,
+  ].join("\n");
+};
+
+const generateGeminiSummary = async (article) => {
+  if (!GEMINI_API_KEY) {
+    throw new Error("AI provider is not configured (GEMINI_API_KEY missing)");
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
+      GEMINI_MODEL
+    )}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`,
+    {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: buildAiPrompt(article) }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 500,
+        responseMimeType: "application/json",
+      },
+    }),
+  }
+  );
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Gemini request failed (${response.status}): ${body.slice(0, 240)}`);
+  }
+
+  const payload = await response.json();
+  const text =
+    payload?.candidates?.[0]?.content?.parts?.map((part) => part?.text || "").join("") || "";
+  const parsed = parseModelJson(text);
+  if (!parsed) {
+    throw new Error("AI provider returned invalid JSON");
+  }
+
   const enriched = enrichArticleTopics(article);
-  const sourceText = enriched.content || enriched.summary || "";
-  const keyPoints = summarizeText(sourceText, 4);
-  const fallback = enriched.summary
-    ? [String(enriched.summary).trim()]
-    : [`${enriched.title} is the latest update from ${enriched.publisher}.`];
-  const finalPoints = keyPoints.length ? keyPoints : fallback;
-  const text = finalPoints.join(" ");
+  const summaryText = String(parsed.summary || "").replace(/\s+/g, " ").trim();
+  const keyPoints = Array.isArray(parsed.keyPoints)
+    ? parsed.keyPoints
+        .map((item) => String(item || "").replace(/\s+/g, " ").trim())
+        .filter(Boolean)
+        .slice(0, 5)
+    : [];
+  const category = normalizeTopic(parsed.category) || enriched.primaryCategory || "world";
+
+  if (!summaryText) {
+    throw new Error("AI provider returned empty summary");
+  }
 
   return {
-    text,
-    keyPoints: finalPoints,
-    category: enriched.primaryCategory || "world",
+    text: summaryText,
+    keyPoints: keyPoints.length ? keyPoints : [summaryText],
+    category,
     generatedAt: new Date(),
-    model: "heuristic-1min-v1",
+    model: GEMINI_MODEL,
   };
 };
 
@@ -147,7 +284,16 @@ const handleAiSummary = async (req, res) => {
       });
     }
 
-    const aiSummary = buildAiSummary(article.toObject());
+    const quota = await consumeAiSummaryQuota(req.user._id);
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: `Daily AI summary limit reached (${AI_SUMMARY_DAILY_LIMIT}/day). Try again tomorrow.`,
+        limit: AI_SUMMARY_DAILY_LIMIT,
+        remaining: quota.remaining,
+      });
+    }
+
+    const aiSummary = await generateGeminiSummary(article.toObject());
     article.aiSummary = aiSummary;
     if (!article.primaryCategory || article.primaryCategory === "world") {
       const enriched = enrichArticleTopics(article.toObject());
@@ -163,6 +309,7 @@ const handleAiSummary = async (req, res) => {
       category: aiSummary.category,
       generatedAt: aiSummary.generatedAt,
       model: aiSummary.model,
+      remainingToday: quota.remaining,
     });
   } catch (error) {
     console.error("AI summary error:", error.message);
@@ -175,7 +322,7 @@ const handleAiSummary = async (req, res) => {
   }
 };
 
-router.get("/:id/ai-summary", handleAiSummary);
-router.post("/:id/ai-summary", handleAiSummary);
+router.get("/:id/ai-summary", authRequired, handleAiSummary);
+router.post("/:id/ai-summary", authRequired, handleAiSummary);
 
 export default router;
