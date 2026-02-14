@@ -36,6 +36,8 @@ const Auth = () => {
   const [mode, setMode] = useState("login");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const authInputClass =
+    "bg-background/90 dark:bg-card/85 border-border/85 text-foreground placeholder:text-muted-foreground";
   const { data: meData } = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
@@ -132,6 +134,7 @@ const Auth = () => {
                 placeholder="Username or email"
                 value={form.identifier}
                 onChange={onChange}
+                className={authInputClass}
               />
             ) : (
               <Input
@@ -139,6 +142,7 @@ const Auth = () => {
                 placeholder="Username"
                 value={form.username}
                 onChange={onChange}
+                className={authInputClass}
               />
             )}
             <div className="relative">
@@ -148,7 +152,7 @@ const Auth = () => {
                 type={showPassword ? "text" : "password"}
                 value={form.password}
                 onChange={onChange}
-                className="pr-10"
+                className={`${authInputClass} pr-10`}
               />
               <button
                 type="button"
@@ -172,7 +176,7 @@ const Auth = () => {
                     type={showConfirmPassword ? "text" : "password"}
                     value={form.confirmPassword}
                     onChange={onChange}
-                    className="pr-10"
+                    className={`${authInputClass} pr-10`}
                   />
                   <button
                     type="button"

@@ -244,7 +244,9 @@ const Home = () => {
   const lazySentinelRef = useRef(null);
   const mobileSummaryTimerRef = useRef(null);
   const mobileTouchStartXRef = useRef(null);
+  const mobileTouchStartYRef = useRef(null);
   const mobileTouchDeltaXRef = useRef(0);
+  const mobileTouchDeltaYRef = useRef(0);
   const mobileSwipeDoneRef = useRef(false);
   const touchStartXRef = useRef(null);
   const touchDeltaXRef = useRef(0);
@@ -476,33 +478,42 @@ const Home = () => {
 
   const onMobileCardTouchStart = (event) => {
     mobileTouchStartXRef.current = event.touches?.[0]?.clientX ?? null;
+    mobileTouchStartYRef.current = event.touches?.[0]?.clientY ?? null;
     mobileTouchDeltaXRef.current = 0;
+    mobileTouchDeltaYRef.current = 0;
     mobileSwipeDoneRef.current = false;
   };
 
   const onMobileCardTouchMove = (event) => {
-    if (mobileTouchStartXRef.current == null || mobileSwipeDoneRef.current)
-      return;
+    if (mobileTouchStartXRef.current == null || mobileTouchStartYRef.current == null) return;
     const currentX = event.touches?.[0]?.clientX;
+    const currentY = event.touches?.[0]?.clientY;
     if (typeof currentX !== "number") return;
+    if (typeof currentY !== "number") return;
     mobileTouchDeltaXRef.current = currentX - mobileTouchStartXRef.current;
-    const threshold = 30;
-    if (mobileTouchDeltaXRef.current <= -threshold) {
-      setMobileCardIndex((prev) =>
-        Math.min(prev + 1, mobileStories.length - 1),
-      );
-      setMobileSummaryOpenId(null);
-      mobileSwipeDoneRef.current = true;
-    } else if (mobileTouchDeltaXRef.current >= threshold) {
-      setMobileCardIndex((prev) => Math.max(prev - 1, 0));
-      setMobileSummaryOpenId(null);
-      mobileSwipeDoneRef.current = true;
-    }
+    mobileTouchDeltaYRef.current = currentY - mobileTouchStartYRef.current;
   };
 
   const onMobileCardTouchEnd = () => {
+    if (!mobileSwipeDoneRef.current) {
+      const absX = Math.abs(mobileTouchDeltaXRef.current);
+      const absY = Math.abs(mobileTouchDeltaYRef.current);
+      const isHorizontalSwipe = absX >= 52 && absX > absY * 1.25;
+      if (isHorizontalSwipe) {
+        if (mobileTouchDeltaXRef.current < 0) {
+          setMobileCardIndex((prev) =>
+            Math.min(prev + 1, mobileStories.length - 1),
+          );
+        } else {
+          setMobileCardIndex((prev) => Math.max(prev - 1, 0));
+        }
+        setMobileSummaryOpenId(null);
+      }
+    }
     mobileTouchStartXRef.current = null;
+    mobileTouchStartYRef.current = null;
     mobileTouchDeltaXRef.current = 0;
+    mobileTouchDeltaYRef.current = 0;
     mobileSwipeDoneRef.current = false;
   };
 
@@ -782,7 +793,7 @@ const Home = () => {
                     key={`mobile-${article._id || article.url || article.title}-${index}`}
                     className="box-border w-full min-w-0 shrink-0 basis-full"
                   >
-                    <article className="flex h-[80dvh] flex-col overflow-hidden rounded-xl border border-border/80 bg-background/75 p-3 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)]">
+                  <article className="flex h-[82dvh] flex-col overflow-hidden rounded-xl border border-border/80 bg-background/75 p-3 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)]">
                       <div className="relative mb-2.5">
                         <img
                           src={
@@ -794,7 +805,7 @@ const Home = () => {
                             )
                           }
                           alt={article.title}
-                          className="h-[33dvh] w-full rounded-lg border border-border/70 bg-black/5 object-cover"
+                        className="h-[34dvh] w-full rounded-lg border border-border/70 bg-black/5 object-cover"
                           loading="lazy"
                           onError={(event) => {
                             event.currentTarget.src = getCategoryPlaceholder(
