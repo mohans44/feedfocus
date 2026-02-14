@@ -156,12 +156,6 @@ const callCloudflareGenerate = async (model, prompt) => {
       },
       body: JSON.stringify({
         prompt,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
         max_tokens: 500,
         temperature: 0.2,
       }),
