@@ -16,7 +16,9 @@ const Layout = () => {
       <main className="container flex-1 pt-3 sm:pt-6">
         <Outlet />
       </main>
-      <Footer />
+      <div className="hidden sm:block">
+        <Footer />
+      </div>
     </div>
   );
 };

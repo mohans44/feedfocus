@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Clapperboard,
   Cpu,
+  ExternalLink,
   Flag,
   Globe,
   MapPin,
@@ -71,7 +72,12 @@ const readStoredState = () => {
 };
 
 const STATE_KEYWORDS = {
-  "andhra pradesh": ["andhra pradesh", "visakhapatnam", "vijayawada", "tirupati"],
+  "andhra pradesh": [
+    "andhra pradesh",
+    "visakhapatnam",
+    "vijayawada",
+    "tirupati",
+  ],
   "arunachal pradesh": ["arunachal pradesh", "itanagar"],
   assam: ["assam", "guwahati", "dibrugarh", "silchar"],
   bihar: ["bihar", "patna", "gaya", "muzaffarpur"],
@@ -96,7 +102,14 @@ const STATE_KEYWORDS = {
   "tamil nadu": ["tamil nadu", "chennai", "coimbatore", "madurai"],
   telangana: ["telangana", "hyderabad", "warangal"],
   tripura: ["tripura", "agartala"],
-  "uttar pradesh": ["uttar pradesh", "lucknow", "kanpur", "varanasi", "agra", "noida"],
+  "uttar pradesh": [
+    "uttar pradesh",
+    "lucknow",
+    "kanpur",
+    "varanasi",
+    "agra",
+    "noida",
+  ],
   uttarakhand: ["uttarakhand", "dehradun", "haridwar"],
   "west bengal": ["west bengal", "kolkata", "howrah", "durgapur", "siliguri"],
   delhi: ["delhi", "new delhi", "ncr"],
@@ -107,7 +120,9 @@ const STATE_KEYWORDS = {
 };
 
 const localStateKeywords = (stateName = "") => {
-  const lower = String(stateName || "").toLowerCase().trim();
+  const lower = String(stateName || "")
+    .toLowerCase()
+    .trim();
   if (!lower) return [];
   const base = STATE_KEYWORDS[lower] || [lower];
   return Array.from(new Set([lower, ...base]));
@@ -116,7 +131,8 @@ const localStateKeywords = (stateName = "") => {
 const isLocalStateMatch = (article = {}, stateName = "") => {
   const keywords = localStateKeywords(stateName);
   if (!keywords.length) return false;
-  const haystack = `${article.title || ""} ${article.summary || ""} ${(article.content || "").slice(0, 1200)} ${article.url || ""}`.toLowerCase();
+  const haystack =
+    `${article.title || ""} ${article.summary || ""} ${(article.content || "").slice(0, 1200)} ${article.url || ""}`.toLowerCase();
   return keywords.some((keyword) => haystack.includes(keyword));
 };
 
@@ -168,7 +184,11 @@ const BannerCard = ({
           onToggleBookmark?.(article);
         }}
       >
-        {isBookmarked ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+        {isBookmarked ? (
+          <BookmarkCheck className="h-4 w-4" />
+        ) : (
+          <Bookmark className="h-4 w-4" />
+        )}
       </button>
       <button
         type="button"
@@ -208,6 +228,9 @@ const Home = () => {
   const [aiLoadingId, setAiLoadingId] = useState(null);
   const [aiSummaryById, setAiSummaryById] = useState({});
   const [activeSummaryArticle, setActiveSummaryArticle] = useState(null);
+  const [mobileSummaryOpenId, setMobileSummaryOpenId] = useState(null);
+  const [mobileSummaryTransition, setMobileSummaryTransition] = useState(null);
+  const [mobileCardIndex, setMobileCardIndex] = useState(0);
   const [categorySwitching, setCategorySwitching] = useState(false);
   const [carouselBookmarkSet, setCarouselBookmarkSet] = useState(new Set());
 
@@ -219,6 +242,12 @@ const Home = () => {
   const [showGoTop, setShowGoTop] = useState(false);
   const [userStateName, setUserStateName] = useState(() => readStoredState());
   const lazySentinelRef = useRef(null);
+  const mobileSummaryTimerRef = useRef(null);
+  const mobileTouchStartXRef = useRef(null);
+  const mobileTouchDeltaXRef = useRef(0);
+  const mobileSwipeDoneRef = useRef(false);
+  const touchStartXRef = useRef(null);
+  const touchDeltaXRef = useRef(0);
 
   const { data: meData } = useQuery({
     queryKey: ["me"],
@@ -247,7 +276,13 @@ const Home = () => {
         : undefined;
 
   const { data: topData, isFetching: articlesFetching } = useQuery({
-    queryKey: ["articles", selectedTopic, apiTopic, search, initialStoriesLimit],
+    queryKey: [
+      "articles",
+      selectedTopic,
+      apiTopic,
+      search,
+      initialStoriesLimit,
+    ],
     queryFn: () =>
       getArticles({
         limit: initialStoriesLimit,
@@ -269,7 +304,9 @@ const Home = () => {
       sortByPublishedTimeDesc(
         isActiveForYou ? forYouData?.items || [] : topData?.items || [],
       ).filter((item) =>
-        selectedTopic === "local" ? isLocalStateMatch(item, userStateName) : true
+        selectedTopic === "local"
+          ? isLocalStateMatch(item, userStateName)
+          : true,
       ),
     [isActiveForYou, forYouData, topData, selectedTopic, userStateName],
   );
@@ -293,6 +330,10 @@ const Home = () => {
     if (meData?.user) return items;
     return items.slice(0, 12);
   }, [stories, carouselStories.length, meData?.user]);
+  const mobileStories = useMemo(() => {
+    if (meData?.user) return stories;
+    return stories.slice(0, 12);
+  }, [stories, meData?.user]);
   const showInitialLoading =
     categorySwitching || (isCategoryLoading && !stories.length);
 
@@ -303,6 +344,9 @@ const Home = () => {
     setAiSummaryById({});
     setAiLoadingId(null);
     setActiveSummaryArticle(null);
+    setMobileSummaryOpenId(null);
+    setMobileSummaryTransition(null);
+    setMobileCardIndex(0);
     setCarouselBookmarkSet(new Set());
     setExtraItems([]);
     setPaginationCursor(null);
@@ -310,6 +354,14 @@ const Home = () => {
     setLoadingMore(false);
     setAutoLazyLoad(false);
   }, [selectedTopic, search]);
+
+  useEffect(() => {
+    return () => {
+      if (mobileSummaryTimerRef.current) {
+        clearTimeout(mobileSummaryTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isCategoryLoading) {
@@ -323,7 +375,10 @@ const Home = () => {
     window.addEventListener("ff:location-updated", refreshStateFromStorage);
     window.addEventListener("focus", refreshStateFromStorage);
     return () => {
-      window.removeEventListener("ff:location-updated", refreshStateFromStorage);
+      window.removeEventListener(
+        "ff:location-updated",
+        refreshStateFromStorage,
+      );
       window.removeEventListener("focus", refreshStateFromStorage);
     };
   }, []);
@@ -359,9 +414,13 @@ const Home = () => {
 
   useEffect(() => {
     if (carouselStories.length <= 1) return;
-    if (carouselTrackIndex < 0 || carouselTrackIndex > carouselStories.length + 1) {
+    if (
+      carouselTrackIndex < 0 ||
+      carouselTrackIndex > carouselStories.length + 1
+    ) {
       const normalized =
-        ((((carouselTrackIndex - 1) % carouselStories.length) + carouselStories.length) %
+        ((((carouselTrackIndex - 1) % carouselStories.length) +
+          carouselStories.length) %
           carouselStories.length) +
         1;
       setCarouselAnimating(false);
@@ -389,6 +448,62 @@ const Home = () => {
         requestAnimationFrame(() => setCarouselAnimating(true));
       });
     }
+  };
+
+  const onCarouselTouchStart = (event) => {
+    touchStartXRef.current = event.touches?.[0]?.clientX ?? null;
+    touchDeltaXRef.current = 0;
+  };
+
+  const onCarouselTouchMove = (event) => {
+    if (touchStartXRef.current == null) return;
+    const currentX = event.touches?.[0]?.clientX;
+    if (typeof currentX !== "number") return;
+    touchDeltaXRef.current = currentX - touchStartXRef.current;
+  };
+
+  const onCarouselTouchEnd = () => {
+    if (carouselStories.length <= 1) return;
+    const threshold = 45;
+    if (touchDeltaXRef.current <= -threshold) {
+      setCarouselTrackIndex((prev) => prev + 1);
+    } else if (touchDeltaXRef.current >= threshold) {
+      setCarouselTrackIndex((prev) => prev - 1);
+    }
+    touchStartXRef.current = null;
+    touchDeltaXRef.current = 0;
+  };
+
+  const onMobileCardTouchStart = (event) => {
+    mobileTouchStartXRef.current = event.touches?.[0]?.clientX ?? null;
+    mobileTouchDeltaXRef.current = 0;
+    mobileSwipeDoneRef.current = false;
+  };
+
+  const onMobileCardTouchMove = (event) => {
+    if (mobileTouchStartXRef.current == null || mobileSwipeDoneRef.current)
+      return;
+    const currentX = event.touches?.[0]?.clientX;
+    if (typeof currentX !== "number") return;
+    mobileTouchDeltaXRef.current = currentX - mobileTouchStartXRef.current;
+    const threshold = 30;
+    if (mobileTouchDeltaXRef.current <= -threshold) {
+      setMobileCardIndex((prev) =>
+        Math.min(prev + 1, mobileStories.length - 1),
+      );
+      setMobileSummaryOpenId(null);
+      mobileSwipeDoneRef.current = true;
+    } else if (mobileTouchDeltaXRef.current >= threshold) {
+      setMobileCardIndex((prev) => Math.max(prev - 1, 0));
+      setMobileSummaryOpenId(null);
+      mobileSwipeDoneRef.current = true;
+    }
+  };
+
+  const onMobileCardTouchEnd = () => {
+    mobileTouchStartXRef.current = null;
+    mobileTouchDeltaXRef.current = 0;
+    mobileSwipeDoneRef.current = false;
   };
 
   const onBookmark = async (article) => {
@@ -494,13 +609,13 @@ const Home = () => {
         </section>
       ) : null}
 
-      <section className="space-y-2 sm:space-y-4">
+      <section className="sticky top-11 z-30 space-y-2 bg-background/95 py-1 backdrop-blur-md sm:static sm:space-y-4 sm:bg-transparent sm:py-0 sm:backdrop-blur-none">
         <div className="scrollbar-none -mx-0.5 flex snap-x gap-1.5 overflow-x-auto pb-1 pl-0.5 pr-0.5 sm:mx-0 sm:gap-3 sm:pb-2 sm:pl-0 sm:pr-0">
           {categories.map((category) => (
             <button
               key={category.value}
               type="button"
-              className={`snap-start whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm ${
+              className={`snap-start whitespace-nowrap rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm ${
                 category.value === selectedTopic
                   ? "border-accent bg-accent text-accent-foreground shadow-[0_10px_22px_-18px_hsl(var(--accent))]"
                   : "border-border bg-card text-foreground hover:bg-muted"
@@ -526,17 +641,31 @@ const Home = () => {
       <section className="space-y-4 sm:space-y-6">
         {showInitialLoading ? (
           <div className="space-y-3 sm:space-y-4">
-            <div className="skeleton h-[180px] rounded-3xl sm:h-[300px] lg:h-[420px]" />
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, idx) => (
-                <div key={idx} className="skeleton h-40 rounded-2xl sm:h-48" />
-              ))}
+            <div className="md:hidden">
+              <div className="skeleton h-[84dvh] rounded-xl" />
+            </div>
+            <div className="hidden md:block">
+              <div className="skeleton h-[180px] rounded-3xl sm:h-[300px] lg:h-[420px]" />
+              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, idx) => (
+                  <div
+                    key={idx}
+                    className="skeleton h-40 rounded-2xl sm:h-48"
+                  />
+                ))}
+              </div>
             </div>
           </div>
         ) : null}
 
         {!showInitialLoading && carouselStories.length ? (
-          <div className="relative overflow-hidden rounded-xl sm:rounded-3xl">
+          <div
+            className="relative hidden overflow-hidden rounded-xl md:block md:rounded-3xl"
+            onTouchStart={onCarouselTouchStart}
+            onTouchMove={onCarouselTouchMove}
+            onTouchEnd={onCarouselTouchEnd}
+            onTouchCancel={onCarouselTouchEnd}
+          >
             <div
               className={`flex will-change-transform ${carouselAnimating ? "transition-transform duration-700 ease-out" : "transition-none"}`}
               style={{ transform: `translateX(-${carouselTrackIndex * 100}%)` }}
@@ -546,51 +675,53 @@ const Home = () => {
                 const key = article._id || article.url || article.title;
                 const isBookmarked = carouselBookmarkSet.has(key);
                 return (
-                <div
-                  key={`${article._id || article.url || article.title}-${index}`}
-                  className="w-full flex-shrink-0"
-                >
-                  <BannerCard
-                    article={article}
-                    isBookmarked={isBookmarked}
-                    summaryBusy={aiLoadingId === article._id}
-                    onToggleBookmark={(selectedArticle) => {
-                      const bookmarkKey =
-                        selectedArticle._id || selectedArticle.url || selectedArticle.title;
-                      setCarouselBookmarkSet((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(bookmarkKey)) next.delete(bookmarkKey);
-                        else next.add(bookmarkKey);
-                        return next;
-                      });
-                    }}
-                    onShowSummary={async (selectedArticle) => {
-                      if (!meData?.user) {
-                        navigate("/auth");
-                        return;
-                      }
-                      const articleId = selectedArticle?._id;
-                      if (!articleId) return;
-                      if (
-                        aiSummaryById[articleId] &&
-                        !aiSummaryById[articleId].error
-                      ) {
-                        setActiveSummaryArticle(selectedArticle);
-                        return;
-                      }
-                      setAiLoadingId(articleId);
-                      const data = await getAiSummary(articleId);
-                      setAiSummaryById((prev) => ({
-                        ...prev,
-                        [articleId]: data,
-                      }));
-                      setAiLoadingId(null);
-                      if (!data?.error) {
-                        setActiveSummaryArticle(selectedArticle);
-                      }
-                    }}
-                  />
-                </div>
+                  <div
+                    key={`${article._id || article.url || article.title}-${index}`}
+                    className="w-full flex-shrink-0"
+                  >
+                    <BannerCard
+                      article={article}
+                      isBookmarked={isBookmarked}
+                      summaryBusy={aiLoadingId === article._id}
+                      onToggleBookmark={(selectedArticle) => {
+                        const bookmarkKey =
+                          selectedArticle._id ||
+                          selectedArticle.url ||
+                          selectedArticle.title;
+                        setCarouselBookmarkSet((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(bookmarkKey)) next.delete(bookmarkKey);
+                          else next.add(bookmarkKey);
+                          return next;
+                        });
+                      }}
+                      onShowSummary={async (selectedArticle) => {
+                        if (!meData?.user) {
+                          navigate("/auth");
+                          return;
+                        }
+                        const articleId = selectedArticle?._id;
+                        if (!articleId) return;
+                        if (
+                          aiSummaryById[articleId] &&
+                          !aiSummaryById[articleId].error
+                        ) {
+                          setActiveSummaryArticle(selectedArticle);
+                          return;
+                        }
+                        setAiLoadingId(articleId);
+                        const data = await getAiSummary(articleId);
+                        setAiSummaryById((prev) => ({
+                          ...prev,
+                          [articleId]: data,
+                        }));
+                        setAiLoadingId(null);
+                        if (!data?.error) {
+                          setActiveSummaryArticle(selectedArticle);
+                        }
+                      }}
+                    />
+                  </div>
                 );
               })}
             </div>
@@ -617,82 +748,269 @@ const Home = () => {
           </div>
         ) : null}
 
-        {!showInitialLoading && textStories.length ? (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {textStories.map((article, index) => {
+        {!showInitialLoading && mobileStories.length ? (
+          <div
+            className="relative w-full max-w-full overflow-x-hidden pb-2 md:hidden"
+            style={{ touchAction: "pan-y" }}
+          >
+            <div
+              className="flex w-full will-change-transform transition-transform duration-300 ease-out"
+              style={{ transform: `translateX(-${mobileCardIndex * 100}%)` }}
+              onTouchStart={onMobileCardTouchStart}
+              onTouchMove={onMobileCardTouchMove}
+              onTouchEnd={onMobileCardTouchEnd}
+              onTouchCancel={onMobileCardTouchEnd}
+            >
+              {mobileStories.map((article, index) => {
                 const articleId = article._id;
                 const isBookmarked = articleId
                   ? bookmarkIdSet.has(articleId)
                   : false;
                 const isBusy = bookmarkBusyId === articleId;
                 const aiPayload = articleId ? aiSummaryById[articleId] : null;
-                const isSummaryOpen = activeSummaryArticle?._id === articleId;
+                const isSummaryOpen = mobileSummaryOpenId === articleId;
+                const transitionPhase =
+                  mobileSummaryTransition?.id === articleId
+                    ? mobileSummaryTransition.phase
+                    : null;
+                const bodyText = isSummaryOpen
+                  ? aiPayload?.summary || ""
+                  : article.content || article.summary || "";
 
                 return (
-                  <ArticleCard
-                    key={`${article._id || article.url || article.title}-${index}`}
-                    article={article}
-                    actions={
-                      <div className="flex w-full flex-wrap gap-1.5 sm:gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-                          onClick={() => onBookmark(article)}
-                          disabled={isBusy || !articleId}
-                        >
-                          {isBookmarked ? (
-                            <BookmarkCheck className="h-4 w-4 text-primary" />
-                          ) : (
-                            <Bookmark className="h-4 w-4" />
-                          )}
-                          {isBookmarked ? "Bookmarked" : "Bookmark"}
-                        </Button>
-                        {articleId && meData?.user ? (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            disabled={aiLoadingId === articleId}
-                            onClick={async () => {
-                              if (isSummaryOpen) {
-                                setActiveSummaryArticle(null);
-                                return;
-                              }
-                              if (
-                                !aiSummaryById[articleId] ||
-                                aiSummaryById[articleId].error
-                              ) {
-                                setAiLoadingId(articleId);
-                                const data = await getAiSummary(articleId);
-                                setAiSummaryById((prev) => ({
-                                  ...prev,
-                                  [articleId]: data,
-                                }));
-                                setAiLoadingId(null);
-                              }
-                              setActiveSummaryArticle(article);
-                            }}
+                  <div
+                    key={`mobile-${article._id || article.url || article.title}-${index}`}
+                    className="box-border w-full min-w-0 shrink-0 basis-full"
+                  >
+                    <article className="flex h-[80dvh] flex-col overflow-hidden rounded-xl border border-border/80 bg-background/75 p-3 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)]">
+                      <div className="relative mb-2.5">
+                        <img
+                          src={
+                            article.imageUrl ||
+                            getCategoryPlaceholder(
+                              article.primaryCategory ||
+                                article.topics?.[0] ||
+                                "world",
+                            )
+                          }
+                          alt={article.title}
+                          className="h-[33dvh] w-full rounded-lg border border-border/70 bg-black/5 object-cover"
+                          loading="lazy"
+                          onError={(event) => {
+                            event.currentTarget.src = getCategoryPlaceholder(
+                              article.primaryCategory ||
+                                article.topics?.[0] ||
+                                "world",
+                            );
+                          }}
+                        />
+                        {article.url ? (
+                          <a
+                            href={article.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label="Read source"
+                            className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-black/50 text-white backdrop-blur-sm"
                           >
-                            <Sparkles className="h-3.5 w-3.5" />
-                            {aiLoadingId === articleId
-                              ? "Generating..."
-                              : isSummaryOpen
-                                ? "Hide AI summary"
-                                : aiPayload?.error
-                                ? "Retry AI summary"
-                                : "Show AI summary"}
-                          </Button>
-                        ) : null}
-                        {aiPayload?.error ? (
-                          <p className="w-full text-xs text-red-500">
-                            Failed to load AI summary: {aiPayload.error}
-                          </p>
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
                         ) : null}
                       </div>
-                    }
-                  />
+                      <div className="flex min-h-0 flex-1 flex-col">
+                        <div className="w-full whitespace-normal break-words text-xs text-muted-foreground">
+                          {article.publisher}
+                        </div>
+                        <h3 className="mt-1 w-full whitespace-normal break-words text-base font-semibold leading-snug">
+                          {article.title}
+                        </h3>
+                        <div
+                          key={`${articleId || index}-${isSummaryOpen ? "summary" : "content"}`}
+                          className={`mt-2 min-h-0 flex-1 overflow-y-auto pr-1 ${
+                            transitionPhase === "out"
+                              ? "snap-fade-out"
+                              : transitionPhase === "in"
+                                ? "snap-fade-in"
+                                : ""
+                          }`}
+                        >
+                          <p className="w-full whitespace-normal break-words text-sm leading-6 text-muted-foreground">
+                            {bodyText}
+                          </p>
+                        </div>
+                        <div className="mt-2 flex w-full items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            aria-label={
+                              isBookmarked ? "Remove bookmark" : "Add bookmark"
+                            }
+                            onClick={() => onBookmark(article)}
+                            disabled={isBusy || !articleId}
+                          >
+                            {isBookmarked ? (
+                              <BookmarkCheck className="h-4 w-4 text-primary" />
+                            ) : (
+                              <Bookmark className="h-4 w-4" />
+                            )}
+                            {isBookmarked ? "Bookmarked" : "Add bookmark"}
+                          </Button>
+                          {articleId && meData?.user ? (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="flex-1"
+                              disabled={aiLoadingId === articleId}
+                              onClick={async () => {
+                                if (!articleId) return;
+                                const animateSwap = (nextOpen) => {
+                                  setMobileSummaryTransition({
+                                    id: articleId,
+                                    phase: "out",
+                                  });
+                                  if (mobileSummaryTimerRef.current) {
+                                    clearTimeout(mobileSummaryTimerRef.current);
+                                  }
+                                  mobileSummaryTimerRef.current = setTimeout(
+                                    () => {
+                                      setMobileSummaryOpenId(
+                                        nextOpen ? articleId : null,
+                                      );
+                                      setMobileSummaryTransition({
+                                        id: articleId,
+                                        phase: "in",
+                                      });
+                                      mobileSummaryTimerRef.current =
+                                        setTimeout(() => {
+                                          setMobileSummaryTransition(null);
+                                        }, 230);
+                                    },
+                                    210,
+                                  );
+                                };
+                                if (isSummaryOpen) {
+                                  animateSwap(false);
+                                  return;
+                                }
+                                if (
+                                  !aiSummaryById[articleId] ||
+                                  aiSummaryById[articleId].error
+                                ) {
+                                  setAiLoadingId(articleId);
+                                  const data = await getAiSummary(articleId);
+                                  setAiSummaryById((prev) => ({
+                                    ...prev,
+                                    [articleId]: data,
+                                  }));
+                                  setAiLoadingId(null);
+                                  if (data?.error) return;
+                                }
+                                animateSwap(true);
+                              }}
+                            >
+                              <Sparkles className="h-3.5 w-3.5" />
+                              {aiLoadingId === articleId
+                                ? "Generating..."
+                                : isSummaryOpen
+                                  ? "Hide AI summary"
+                                  : aiPayload?.error
+                                    ? "Retry"
+                                    : "AI summary"}
+                            </Button>
+                          ) : null}
+                          {aiPayload?.error ? (
+                            <p className="w-full text-xs text-red-500">
+                              Failed to load AI summary: {aiPayload.error}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </article>
+                  </div>
                 );
               })}
+            </div>
+          </div>
+        ) : null}
+
+        {!showInitialLoading && textStories.length ? (
+          <div className="hidden grid-cols-1 gap-3 md:grid md:grid-cols-2 xl:grid-cols-3">
+            {textStories.map((article, index) => {
+              const articleId = article._id;
+              const isBookmarked = articleId
+                ? bookmarkIdSet.has(articleId)
+                : false;
+              const isBusy = bookmarkBusyId === articleId;
+              const aiPayload = articleId ? aiSummaryById[articleId] : null;
+              const isSummaryOpen = activeSummaryArticle?._id === articleId;
+
+              return (
+                <ArticleCard
+                  key={`${article._id || article.url || article.title}-${index}`}
+                  article={article}
+                  actions={
+                    <div className="flex w-full flex-wrap gap-1.5 sm:gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        aria-label={
+                          isBookmarked ? "Remove bookmark" : "Add bookmark"
+                        }
+                        onClick={() => onBookmark(article)}
+                        disabled={isBusy || !articleId}
+                      >
+                        {isBookmarked ? (
+                          <BookmarkCheck className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Bookmark className="h-4 w-4" />
+                        )}
+                        {isBookmarked ? "Bookmarked" : "Bookmark"}
+                      </Button>
+                      {articleId && meData?.user ? (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          disabled={aiLoadingId === articleId}
+                          onClick={async () => {
+                            if (isSummaryOpen) {
+                              setActiveSummaryArticle(null);
+                              return;
+                            }
+                            if (
+                              !aiSummaryById[articleId] ||
+                              aiSummaryById[articleId].error
+                            ) {
+                              setAiLoadingId(articleId);
+                              const data = await getAiSummary(articleId);
+                              setAiSummaryById((prev) => ({
+                                ...prev,
+                                [articleId]: data,
+                              }));
+                              setAiLoadingId(null);
+                            }
+                            setActiveSummaryArticle(article);
+                          }}
+                        >
+                          <Sparkles className="h-3.5 w-3.5" />
+                          {aiLoadingId === articleId
+                            ? "Generating..."
+                            : isSummaryOpen
+                              ? "Hide AI summary"
+                              : aiPayload?.error
+                                ? "Retry AI summary"
+                                : "Show AI summary"}
+                        </Button>
+                      ) : null}
+                      {aiPayload?.error ? (
+                        <p className="w-full text-xs text-red-500">
+                          Failed to load AI summary: {aiPayload.error}
+                        </p>
+                      ) : null}
+                    </div>
+                  }
+                />
+              );
+            })}
           </div>
         ) : null}
 
@@ -703,27 +1021,29 @@ const Home = () => {
           </p>
         ) : null}
 
-        {meData?.user && stories.length ? (
-          hasMore ? (
-            <Button
-              className="w-full sm:w-auto"
-              variant="outline"
-              onClick={async () => {
-                setAutoLazyLoad(true);
-                await loadMoreStories();
-              }}
-              disabled={loadingMore}
-            >
-              {loadingMore ? "Loading..." : "Load more"}
-              {!loadingMore ? <ArrowRight className="h-4 w-4" /> : null}
-            </Button>
-          ) : (
-            <p className="py-2 text-center text-sm text-muted-foreground">
-              End of the road... for now. Our news robots are out fetching the
-              next scoop.
-            </p>
-          )
-        ) : null}
+        <div className="hidden md:block">
+          {meData?.user && stories.length ? (
+            hasMore ? (
+              <Button
+                className="w-full sm:w-auto"
+                variant="outline"
+                onClick={async () => {
+                  setAutoLazyLoad(true);
+                  await loadMoreStories();
+                }}
+                disabled={loadingMore}
+              >
+                {loadingMore ? "Loading..." : "Load more"}
+                {!loadingMore ? <ArrowRight className="h-4 w-4" /> : null}
+              </Button>
+            ) : (
+              <p className="py-2 text-center text-sm text-muted-foreground">
+                End of the road... for now. Our news robots are out fetching the
+                next scoop.
+              </p>
+            )
+          ) : null}
+        </div>
         <div ref={lazySentinelRef} className="h-4 w-full" />
       </section>
 

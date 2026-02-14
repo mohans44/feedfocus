@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BookmarkX, Sparkles, X } from "lucide-react";
+import { BookmarkX, ExternalLink, Sparkles, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { getAiSummary, getBookmarks, removeBookmark } from "../utils/api";
 import ArticleCard from "../components/ArticleCard";
 
 const Bookmarks = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [aiLoadingId, setAiLoadingId] = useState(null);
   const [aiSummaryById, setAiSummaryById] = useState({});
@@ -16,6 +18,13 @@ const Bookmarks = () => {
   });
 
   const items = useMemo(() => data?.items || [], [data]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      navigate("/profile", { replace: true });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     if (!activeSummaryArticle?._id) return undefined;
@@ -45,7 +54,73 @@ const Bookmarks = () => {
         <p className="text-sm text-muted-foreground">No bookmarks yet.</p>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-2 md:hidden">
+        {items.map((article) => (
+          <article
+            key={`m-${article._id || article.url}`}
+            className="rounded-lg border border-border/80 bg-background/75 p-3"
+          >
+            <h3 className="line-clamp-2 text-sm font-semibold">{article.title}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{article.publisher}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {article.url ? (
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                >
+                  Source
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              ) : null}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  await removeBookmark(article._id);
+                  await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+                }}
+              >
+                <BookmarkX className="h-4 w-4" />
+                Remove
+              </Button>
+              <Button
+                size="sm"
+                variant="default"
+                disabled={aiLoadingId === article._id}
+                onClick={async () => {
+                  if (!article._id) return;
+                  if (activeSummaryArticle?._id === article._id) {
+                    setActiveSummaryArticle(null);
+                    return;
+                  }
+                  if (aiSummaryById[article._id] && !aiSummaryById[article._id].error) {
+                    setActiveSummaryArticle(article);
+                    return;
+                  }
+                  setAiLoadingId(article._id);
+                  const data = await getAiSummary(article._id);
+                  setAiSummaryById((prev) => ({ ...prev, [article._id]: data }));
+                  setAiLoadingId(null);
+                  if (!data?.error) setActiveSummaryArticle(article);
+                }}
+              >
+                <Sparkles className="h-4 w-4" />
+                {aiLoadingId === article._id
+                  ? "Generating..."
+                  : activeSummaryArticle?._id === article._id
+                    ? "Hide AI summary"
+                    : aiSummaryById[article._id]?.error
+                      ? "Retry AI summary"
+                      : "Show AI summary"}
+              </Button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="hidden grid-cols-1 gap-3 md:grid md:grid-cols-2 lg:grid-cols-3">
         {items.map((article) => (
           <ArticleCard
             key={article._id || article.url}

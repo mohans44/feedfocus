@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { ExternalLink, LogOut, Lock, Sparkles } from "lucide-react";
+import { ExternalLink, LogOut, Lock, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -9,6 +9,7 @@ import {
   getBookmarks,
   getMe,
   logoutUser,
+  removeBookmark,
   updatePreferences,
   updateProfile,
 } from "../utils/api";
@@ -111,9 +112,136 @@ const Profile = () => {
     await queryClient.invalidateQueries({ queryKey: ["for-you"] });
   };
 
+  const removeBookmarkMobile = async (articleId) => {
+    if (!articleId) return;
+    await removeBookmark(articleId);
+    await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+  };
+
   return (
     <div className="space-y-3 sm:space-y-6">
-      <section className="rounded-xl border border-border/80 bg-card/80 p-3.5 sm:rounded-2xl sm:p-6">
+      <section className="rounded-xl border border-border/80 bg-card/80 p-3.5 md:hidden">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold">
+            Hi, {username.charAt(0).toUpperCase() + username.slice(1)}
+          </h1>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={async () => {
+              await logoutUser();
+              await queryClient.invalidateQueries({ queryKey: ["me"] });
+              navigate("/tryit", { replace: true });
+            }}
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-border/80 bg-card/80 p-3.5 md:hidden">
+        <h2 className="text-sm font-semibold">Quick settings</h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={activePanel === "password" ? "default" : "outline"}
+            onClick={() => setActivePanel("password")}
+          >
+            Change password
+          </Button>
+          <Button
+            size="sm"
+            variant={activePanel === "preferences" ? "default" : "outline"}
+            onClick={() => {
+              setSelectedPreferences(preferences);
+              setActivePanel("preferences");
+            }}
+          >
+            Edit preferences
+          </Button>
+        </div>
+
+        {activePanel === "password" ? (
+          <div className="mt-3 space-y-3 rounded-xl border border-border/80 bg-background/72 p-3">
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="New password"
+                className="pl-9"
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" onClick={saveProfile} disabled={savingProfile}>
+                {savingProfile ? "Saving..." : "Update password"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setPassword("");
+                  setActivePanel(null);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {activePanel === "preferences" ? (
+          <div className="mt-3 rounded-xl border border-border/80 bg-background/72 p-3">
+            <p className="text-xs text-muted-foreground">
+              Selected: {selectedPreferences.length} (minimum 4)
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {PREFERENCE_OPTIONS.map((item) => {
+                const selected = selectedPreferences.includes(item);
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => togglePreference(item)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      selected
+                        ? "border-primary/60 bg-primary text-primary-foreground"
+                        : "border-border/80 bg-background text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {item}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                onClick={savePreferences}
+                disabled={savingPreferences || !hasMinPreferences}
+                className="w-auto"
+              >
+                {savingPreferences ? "Saving..." : "Save preferences"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-auto"
+                onClick={() => {
+                  setSelectedPreferences(preferences);
+                  setActivePanel(null);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <div className="hidden md:block">
+      <section className="hidden rounded-xl border border-border/80 bg-card/80 p-3.5 sm:rounded-2xl sm:p-6 md:block">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold sm:text-3xl">
@@ -134,11 +262,7 @@ const Profile = () => {
           </Button>
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-2 sm:gap-3">
-          <div className="rounded-xl border border-border/80 bg-background/72 px-3 py-2.5">
-            <p className="text-xs text-muted-foreground">Bookmarks</p>
-            <p className="text-base font-semibold">{bookmarks.length}</p>
-          </div>
+        <div className="mt-5 grid grid-cols-1 gap-2 sm:gap-3">
           <div className="rounded-xl border border-border/80 bg-background/72 px-3 py-2.5">
             <p className="text-xs text-muted-foreground">Preferences</p>
             <p className="text-base font-semibold">{preferences.length}</p>
@@ -154,7 +278,7 @@ const Profile = () => {
         </p>
       ) : null}
 
-      <section className="rounded-xl border border-border/80 bg-card/80 p-3.5 sm:rounded-2xl sm:p-6">
+      <section className="hidden rounded-xl border border-border/80 bg-card/80 p-3.5 sm:rounded-2xl sm:p-6 md:block">
         <h2 className="text-sm font-semibold sm:text-base">Manage Profile</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
@@ -270,6 +394,7 @@ const Profile = () => {
           </div>
         ) : null}
       </section>
+      </div>
 
       <section className="rounded-xl border border-border/80 bg-card/80 p-3.5 sm:rounded-2xl sm:p-6">
         <h2 className="text-sm font-semibold sm:text-base">Bookmarks</h2>
@@ -303,6 +428,16 @@ const Profile = () => {
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                   ) : null}
+                  <button
+                    type="button"
+                    aria-label="Delete bookmark"
+                    className="inline-flex items-center gap-1 rounded-md border border-border/75 px-2 py-1 text-[11px] font-semibold text-muted-foreground transition hover:bg-muted"
+                    onClick={() => removeBookmarkMobile(article._id)}
+                    disabled={!article._id}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete
+                  </button>
                   <button
                     type="button"
                     className="rounded-full border border-primary/60 bg-primary text-[11px] font-semibold text-primary-foreground px-2.5 py-1 transition hover:bg-primary/90 disabled:opacity-60"

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -33,6 +34,8 @@ const Auth = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("login");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { data: meData } = useQuery({
     queryKey: ["me"],
     queryFn: getMe,
@@ -88,13 +91,37 @@ const Auth = () => {
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-4xl flex-col items-center justify-center">
-      <Card className="glass top-sheen w-full max-w-lg">
+      <Card className="w-full max-w-lg border-border/85 bg-background/95">
         <form className="space-y-6" onSubmit={onSubmit}>
           <div className="space-y-2">
+            <div className="inline-flex rounded-lg border border-border/80 bg-card p-1">
+              <button
+                type="button"
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  mode === "login"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground/75 hover:bg-muted"
+                }`}
+                onClick={() => setMode("login")}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+                  mode === "register"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-foreground/75 hover:bg-muted"
+                }`}
+                onClick={() => setMode("register")}
+              >
+                Create account
+              </button>
+            </div>
             <h1 className="text-2xl sm:text-3xl">
               {mode === "login" ? "Welcome back" : "Create your account"}
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-foreground/75">
               One secure login keeps your feed tuned for 30 days.
             </p>
           </div>
@@ -114,24 +141,58 @@ const Auth = () => {
                 onChange={onChange}
               />
             )}
-            <Input
-              name="password"
-              placeholder="Password"
-              type="password"
-              value={form.password}
-              onChange={onChange}
-            />
+            <div className="relative">
+              <Input
+                name="password"
+                placeholder="Password"
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={onChange}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                onClick={() => setShowPassword((prev) => !prev)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+              </button>
+            </div>
             {mode === "register" ? (
               <>
-                <Input
-                  name="confirmPassword"
-                  placeholder="Confirm password"
-                  type="password"
-                  value={form.confirmPassword}
-                  onChange={onChange}
-                />
+                <div className="relative">
+                  <Input
+                    name="confirmPassword"
+                    placeholder="Confirm password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={form.confirmPassword}
+                    onChange={onChange}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    aria-label={
+                      showConfirmPassword
+                        ? "Hide confirm password"
+                        : "Show confirm password"
+                    }
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition hover:text-foreground"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Select preferences (min 4)</p>
+                  <p className="text-xs text-foreground/70">Select preferences (min 4)</p>
                   <div className="flex flex-wrap gap-2">
                     {PREFERENCE_OPTIONS.map((item) => {
                       const selected = form.preferences.includes(item);
@@ -158,12 +219,12 @@ const Auth = () => {
                       );
                     })}
                   </div>
-                  <p className="text-xs text-muted-foreground">Selected: {form.preferences.length}</p>
+                  <p className="text-xs text-foreground/70">Selected: {form.preferences.length}</p>
                 </div>
               </>
             ) : null}
             {error ? (
-              <p className="text-xs text-red-400">{error}</p>
+              <p className="text-xs text-red-500">{error}</p>
             ) : null}
             <Button className="w-full" type="submit" disabled={loading}>
               {loading
@@ -173,11 +234,11 @@ const Auth = () => {
                 : "Create account"}
             </Button>
           </div>
-          <div className="text-center text-sm text-muted-foreground">
+          <div className="text-center text-sm text-foreground/75">
             {mode === "login" ? (
               <button
                 type="button"
-                className="text-foreground underline underline-offset-4"
+                className="text-primary underline underline-offset-4"
                 onClick={() => setMode("register")}
               >
                 New here? Create an account.
@@ -185,7 +246,7 @@ const Auth = () => {
             ) : (
               <button
                 type="button"
-                className="text-foreground underline underline-offset-4"
+                className="text-primary underline underline-offset-4"
                 onClick={() => setMode("login")}
               >
                 Already have an account? Sign in.

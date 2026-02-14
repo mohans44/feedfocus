@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -42,6 +42,8 @@ const Navbar = () => {
   const [weatherLoading, setWeatherLoading] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const mobileSearchFormRef = useRef(null);
+  const mobileSearchToggleRef = useRef(null);
   const userInitial = String(
     meData?.user?.username || meData?.user?.name || meData?.user?.email || "u",
   )
@@ -90,6 +92,26 @@ const Navbar = () => {
   useEffect(() => {
     setQuery(searchParams.get("q") || searchParams.get("search") || "");
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!showMobileSearch) return undefined;
+    const onPointerDown = (event) => {
+      const target = event.target;
+      if (
+        mobileSearchFormRef.current?.contains(target) ||
+        mobileSearchToggleRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setShowMobileSearch(false);
+    };
+    document.addEventListener("touchstart", onPointerDown, { passive: true });
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [showMobileSearch]);
 
   useEffect(() => {
     let ignore = false;
@@ -286,6 +308,7 @@ const Navbar = () => {
               type="button"
               aria-label="Search"
               className="md:hidden"
+              ref={mobileSearchToggleRef}
               onClick={() => setShowMobileSearch((prev) => !prev)}
             >
               <Search className="h-[18px] w-[18px]" />
@@ -309,6 +332,7 @@ const Navbar = () => {
             size="icon"
             type="button"
             aria-label="Bookmarks"
+            className="hidden sm:inline-flex"
             onClick={() => navigate(isLoggedIn ? "/bookmarks" : "/auth")}
             disabled={!isAuthResolved}
           >
@@ -342,7 +366,11 @@ const Navbar = () => {
         </div>
       </div>
       {isLoggedIn && showMobileSearch ? (
-        <form className="container pb-2.5 md:hidden" onSubmit={submitSearch}>
+        <form
+          className="container pb-2.5 md:hidden"
+          onSubmit={submitSearch}
+          ref={mobileSearchFormRef}
+        >
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input

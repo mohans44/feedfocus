@@ -1,5 +1,6 @@
 import { ExternalLink } from "lucide-react";
 import { getCategoryPlaceholder } from "../utils/placeholders";
+import { cn } from "../lib/utils";
 
 const toReadableSnippet = (text = "", limit = 220) => {
   const cleaned = String(text || "").replace(/\s+/g, " ").trim();
@@ -20,18 +21,24 @@ const formatCardDate = (value) => {
   });
 };
 
-const ArticleCard = ({ article, actions = null }) => {
+const ArticleCard = ({ article, actions = null, className = "" }) => {
   const fallbackImage = getCategoryPlaceholder(
     article.primaryCategory || article.topics?.[0] || "world",
   );
   const imageUrl = article.imageUrl || fallbackImage;
 
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-lg border border-border/80 bg-background/75 p-2.5 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)] sm:rounded-xl sm:p-3">
+    <article
+      className={cn(
+        "flex h-full flex-col overflow-hidden rounded-lg border border-border/80 bg-background/75 p-2.5 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)] sm:rounded-xl sm:p-3",
+        className,
+      )}
+    >
       <img
         src={imageUrl}
         alt={article.title}
         className="mb-2.5 aspect-[16/9] w-full rounded-lg border border-border/70 bg-black/5 object-cover sm:mb-3 sm:rounded-xl"
+        loading="lazy"
         onError={(event) => {
           event.currentTarget.src = fallbackImage;
         }}
