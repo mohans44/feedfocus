@@ -25,6 +25,15 @@ build/
 /feed-focus-frontend/.env.development
 /feed-focus-frontend/.env.production
 /feed-focus-frontend/.env.test
+/feedfocus-frontend/node_modules/
+/feedfocus-frontend/dist/
+/feedfocus-frontend/build/
+/feedfocus-frontend/coverage/
+/feedfocus-frontend/.env
+/feedfocus-frontend/.env.local
+/feedfocus-frontend/.env.development
+/feedfocus-frontend/.env.production
+/feedfocus-frontend/.env.test
 
 # ==========================
 # Node Backend Legacy (feed-focus-backend)
@@ -34,6 +43,11 @@ build/
 /feed-focus-backend/.env.local
 /feed-focus-backend/build/
 /feed-focus-backend/coverage/
+/feedfocus-backend/node_modules/
+/feedfocus-backend/.env
+/feedfocus-backend/.env.local
+/feedfocus-backend/build/
+/feedfocus-backend/coverage/
 
 # ==========================
 # Node Backend (feed-focus-backend-node)
@@ -55,3 +69,9 @@ build/
 /feed-focus-crawler/.env.development
 /feed-focus-crawler/.env.production
 /feed-focus-crawler/coverage/
+/feedfocus-crawler/node_modules/
+/feedfocus-crawler/.env
+/feedfocus-crawler/.env.local
+/feedfocus-crawler/.env.development
+/feedfocus-crawler/.env.production
+/feedfocus-crawler/coverage/
