@@ -12,6 +12,7 @@ import recommendationRoutes from "./routes/recommendations.js";
 
 const app = express();
 app.set("trust proxy", 1);
+const normalizeOrigin = (value = "") => String(value).trim().replace(/\/+$/, "").toLowerCase();
 
 app.use(
   cors({
@@ -19,7 +20,7 @@ app.use(
       if (!origin) {
         return callback(null, true);
       }
-      if (env.frontendUrls.includes(origin)) {
+      if (env.frontendUrls.includes(normalizeOrigin(origin))) {
         return callback(null, true);
       }
       return callback(new Error("CORS origin not allowed"));

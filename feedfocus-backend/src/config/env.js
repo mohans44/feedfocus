@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+const normalizeOrigin = (value = "") => String(value).trim().replace(/\/+$/, "").toLowerCase();
+
 const required = ["MONGO_URI", "JWT_SECRET", "FRONTEND_URL"];
 
 for (const key of required) {
@@ -15,7 +17,7 @@ export const env = {
   mongoUri: process.env.MONGO_URI,
   jwtSecret: process.env.JWT_SECRET,
   frontendUrls: process.env.FRONTEND_URL.split(",")
-    .map((item) => item.trim())
+    .map((item) => normalizeOrigin(item))
     .filter(Boolean),
   cookieName: process.env.COOKIE_NAME || "ff_session",
   jwtExpiryDays: 30,
