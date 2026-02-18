@@ -1,7 +1,7 @@
 import express from "express";
+import bcrypt from "bcryptjs";
 import { User } from "../models/User.js";
 import { signToken } from "../utils/jwt.js";
-import { hashPassword, verifyPassword } from "../utils/password.js";
 import { env } from "../config/env.js";
 
 const router = express.Router();
@@ -51,7 +51,7 @@ router.post("/register", async (req, res) => {
     if (existing?.email === normalizedEmail) {
       return res.status(409).json({ error: "Email already in use" });
     }
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await bcrypt.hash(password, 12);
     const user = await User.create({
       username: normalizedUsername,
       email: normalizedEmail,
@@ -84,7 +84,7 @@ router.post("/login", async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-    const match = await verifyPassword(password, user.passwordHash);
+    const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) {
       return res.status(401).json({ error: "Invalid credentials" });
     }

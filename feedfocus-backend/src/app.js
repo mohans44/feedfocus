@@ -3,7 +3,7 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import compression from "compression";
 import helmet from "helmet";
-import { createRateLimiter } from "./middleware/rateLimit.js";
+import { rateLimit } from "express-rate-limit";
 import { env } from "./config/env.js";
 import authRoutes from "./routes/auth.js";
 import articleRoutes from "./routes/articles.js";
@@ -35,9 +35,11 @@ app.use(
 );
 app.use(compression());
 app.use(
-  createRateLimiter({
+  rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 500,
+    standardHeaders: true,
+    legacyHeaders: false,
   })
 );
 app.use(express.json({ limit: "1mb" }));
