@@ -1,7 +1,7 @@
 import express from "express";
-import bcrypt from "bcryptjs";
 import { authRequired } from "../middleware/auth.js";
 import { User } from "../models/User.js";
+import { hashPassword } from "../utils/password.js";
 
 const router = express.Router();
 
@@ -42,7 +42,7 @@ router.put("/me", authRequired, async (req, res) => {
       if (nextPassword.length < 8) {
         return res.status(400).json({ error: "Password must be at least 8 characters" });
       }
-      updates.passwordHash = await bcrypt.hash(nextPassword, 12);
+      updates.passwordHash = await hashPassword(nextPassword);
     }
 
     if (!Object.keys(updates).length) {
