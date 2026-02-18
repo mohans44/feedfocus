@@ -1,0 +1,1375 @@
+[
+  {
+    "name": "Reuters",
+    "homepage": "https://www.reuters.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://www.reutersagency.com/feed/?best-topics=business-finance&post_type=best",
+        "topic": "business"
+      },
+      {
+        "url": "https://www.reutersagency.com/feed/?best-topics=technology&post_type=best",
+        "topic": "technology"
+      },
+      {
+        "url": "https://www.reutersagency.com/feed/?best-topics=world&post_type=best",
+        "topic": "world"
+      }
+    ],
+    "allowedPaths": [
+      "/world/",
+      "/business/",
+      "/technology/"
+    ]
+  },
+  {
+    "name": "Associated Press",
+    "homepage": "https://apnews.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://rsshub.app/apnews/topics/apf-topnews",
+        "topic": "world"
+      }
+    ],
+    "allowedPaths": [
+      "/article/",
+      "/hub/"
+    ]
+  },
+  {
+    "name": "BBC News",
+    "homepage": "https://www.bbc.com/news",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "topic": "world"
+      },
+      {
+        "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
+        "topic": "business"
+      },
+      {
+        "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
+        "topic": "technology"
+      },
+      {
+        "url": "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml",
+        "topic": "science"
+      },
+      {
+        "url": "https://feeds.bbci.co.uk/news/health/rss.xml",
+        "topic": "health"
+      }
+    ],
+    "allowedPaths": [
+      "/news/",
+      "/articles/"
+    ]
+  },
+  {
+    "name": "NPR",
+    "homepage": "https://www.npr.org",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://feeds.npr.org/1001/rss.xml",
+        "topic": "world"
+      },
+      {
+        "url": "https://feeds.npr.org/1019/rss.xml",
+        "topic": "business"
+      },
+      {
+        "url": "https://feeds.npr.org/1007/rss.xml",
+        "topic": "technology"
+      },
+      {
+        "url": "https://feeds.npr.org/1128/rss.xml",
+        "topic": "science"
+      },
+      {
+        "url": "https://feeds.npr.org/1127/rss.xml",
+        "topic": "health"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/sections/",
+      "/transcripts/"
+    ]
+  },
+  {
+    "name": "The New York Times",
+    "homepage": "https://www.nytimes.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
+        "topic": "world"
+      },
+      {
+        "url": "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+        "topic": "business"
+      },
+      {
+        "url": "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
+        "topic": "technology"
+      },
+      {
+        "url": "https://rss.nytimes.com/services/xml/rss/nyt/Science.xml",
+        "topic": "science"
+      },
+      {
+        "url": "https://rss.nytimes.com/services/xml/rss/nyt/Health.xml",
+        "topic": "health"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/live/",
+      "/interactive/"
+    ]
+  },
+  {
+    "name": "The Guardian",
+    "homepage": "https://www.theguardian.com/international",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://www.theguardian.com/world/rss",
+        "topic": "world"
+      },
+      {
+        "url": "https://www.theguardian.com/business/rss",
+        "topic": "business"
+      },
+      {
+        "url": "https://www.theguardian.com/technology/rss",
+        "topic": "technology"
+      },
+      {
+        "url": "https://www.theguardian.com/science/rss",
+        "topic": "science"
+      },
+      {
+        "url": "https://www.theguardian.com/sport/rss",
+        "topic": "sports"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/live/",
+      "/article/"
+    ]
+  },
+  {
+    "name": "CNBC",
+    "homepage": "https://www.cnbc.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+        "topic": "world"
+      },
+      {
+        "url": "https://www.cnbc.com/id/10001147/device/rss/rss.html",
+        "topic": "business"
+      },
+      {
+        "url": "https://www.cnbc.com/id/19854910/device/rss/rss.html",
+        "topic": "technology"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/video/",
+      "/markets/",
+      "/business/"
+    ]
+  },
+  {
+    "name": "TechCrunch",
+    "homepage": "https://techcrunch.com",
+    "skipHomepage": true,
+    "feeds": [
+      {
+        "url": "https://techcrunch.com/feed/",
+        "topic": "technology"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/category/"
+    ]
+  },
+  {
+    "name": "The Verge",
+    "homepage": "https://www.theverge.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://www.theverge.com/rss/index.xml",
+        "topic": "technology"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/tech/",
+      "/news/"
+    ]
+  },
+  {
+    "name": "Ars Technica",
+    "homepage": "https://arstechnica.com",
+    "skipHomepage": true,
+    "feeds": [
+      {
+        "url": "https://feeds.arstechnica.com/arstechnica/index",
+        "topic": "technology"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/science/",
+      "/tech-policy/",
+      "/gadgets/"
+    ]
+  },
+  {
+    "name": "Engadget",
+    "homepage": "https://www.engadget.com",
+    "skipHomepage": true,
+    "feeds": [
+      {
+        "url": "https://www.engadget.com/rss.xml",
+        "topic": "technology"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/news/"
+    ]
+  },
+  {
+    "name": "Gizmodo",
+    "homepage": "https://gizmodo.com",
+    "skipHomepage": true,
+    "feeds": [
+      {
+        "url": "https://gizmodo.com/rss",
+        "topic": "technology"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/article/"
+    ]
+  },
+  {
+    "name": "9to5Google",
+    "homepage": "https://9to5google.com",
+    "skipHomepage": true,
+    "feeds": [
+      {
+        "url": "https://9to5google.com/feed/",
+        "topic": "technology"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/guides/",
+      "/news/"
+    ]
+  },
+  {
+    "name": "9to5Mac",
+    "homepage": "https://9to5mac.com",
+    "skipHomepage": true,
+    "feeds": [
+      {
+        "url": "https://9to5mac.com/feed/",
+        "topic": "technology"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/guides/",
+      "/news/"
+    ]
+  },
+  {
+    "name": "ESPN",
+    "homepage": "https://www.espn.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://www.espn.com/espn/rss/news",
+        "topic": "sports"
+      }
+    ],
+    "allowedPaths": [
+      "/story/",
+      "/nfl/",
+      "/nba/",
+      "/mlb/",
+      "/soccer/",
+      "/cricket/"
+    ]
+  },
+  {
+    "name": "CREX",
+    "homepage": "https://crex.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://crex.com/rss.xml",
+        "topic": "sports"
+      }
+    ],
+    "allowedPaths": [
+      "/cricket-news/",
+      "/news/",
+      "/story/",
+      "/article/"
+    ]
+  },
+  {
+    "name": "Cricbuzz",
+    "homepage": "https://www.cricbuzz.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://www.cricbuzz.com/cricket-news/rss",
+        "topic": "sports"
+      }
+    ],
+    "allowedPaths": [
+      "/cricket-news/",
+      "/profiles/",
+      "/cricket-series/"
+    ]
+  },
+  {
+    "name": "ESPNcricinfo",
+    "homepage": "https://www.espncricinfo.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/story/",
+      "/cricket-news/",
+      "/series/",
+      "/match-reports/"
+    ]
+  },
+  {
+    "name": "ICC",
+    "homepage": "https://www.icc-cricket.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/matches/",
+      "/tournaments/"
+    ]
+  },
+  {
+    "name": "Medical Xpress",
+    "homepage": "https://medicalxpress.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://medicalxpress.com/rss-feed/",
+        "topic": "health"
+      }
+    ],
+    "allowedPaths": [
+      "/news/",
+      "/health-"
+    ]
+  },
+  {
+    "name": "ScienceDaily",
+    "homepage": "https://www.sciencedaily.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://www.sciencedaily.com/rss/all.xml",
+        "topic": "science"
+      }
+    ],
+    "allowedPaths": [
+      "/releases/"
+    ]
+  },
+  {
+    "name": "CNN",
+    "homepage": "https://www.cnn.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "http://rss.cnn.com/rss/edition.rss",
+        "topic": "world"
+      },
+      {
+        "url": "http://rss.cnn.com/rss/money_latest.rss",
+        "topic": "business"
+      }
+    ],
+    "allowedPaths": [
+      "/20",
+      "/world/",
+      "/business/",
+      "/politics/"
+    ]
+  },
+  {
+    "name": "ABC News",
+    "homepage": "https://abcnews.go.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://abcnews.go.com/abcnews/topstories",
+        "topic": "world"
+      }
+    ],
+    "allowedPaths": [
+      "/story/",
+      "/Politics/",
+      "/Business/"
+    ]
+  },
+  {
+    "name": "CBS News",
+    "homepage": "https://www.cbsnews.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/live/",
+      "/video/"
+    ]
+  },
+  {
+    "name": "NBC News",
+    "homepage": "https://www.nbcnews.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/politics/",
+      "/business/"
+    ]
+  },
+  {
+    "name": "Fox News",
+    "homepage": "https://www.foxnews.com",
+    "skipHomepage": true,
+    "disableSitemaps": true,
+    "feeds": [
+      {
+        "url": "https://moxie.foxnews.com/google-publisher/latest.xml",
+        "topic": "world"
+      }
+    ],
+    "allowedPaths": [
+      "/politics/",
+      "/world/",
+      "/us/",
+      "/tech/"
+    ]
+  },
+  {
+    "name": "Al Jazeera",
+    "homepage": "https://www.aljazeera.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/economy/",
+      "/sports/",
+      "/tag/"
+    ]
+  },
+  {
+    "name": "Sky News",
+    "homepage": "https://news.sky.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/story/",
+      "/world/",
+      "/business/",
+      "/politics/"
+    ]
+  },
+  {
+    "name": "Euronews",
+    "homepage": "https://www.euronews.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/20",
+      "/news/",
+      "/business/",
+      "/culture/"
+    ]
+  },
+  {
+    "name": "DW News",
+    "homepage": "https://www.dw.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/en/",
+      "/news/",
+      "/business/",
+      "/sport/"
+    ]
+  },
+  {
+    "name": "France 24",
+    "homepage": "https://www.france24.com/en",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/20",
+      "/world/",
+      "/economy/",
+      "/live-news/"
+    ]
+  },
+  {
+    "name": "VOA News",
+    "homepage": "https://www.voanews.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/a/",
+      "/news/",
+      "/economy-business/"
+    ]
+  },
+  {
+    "name": "The Independent",
+    "homepage": "https://www.independent.co.uk",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/world/",
+      "/sport/",
+      "/tech/"
+    ]
+  },
+  {
+    "name": "USA Today",
+    "homepage": "https://www.usatoday.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/story/",
+      "/news/",
+      "/money/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "Los Angeles Times",
+    "homepage": "https://www.latimes.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/world-nation/",
+      "/business/",
+      "/politics/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "The Washington Post",
+    "homepage": "https://www.washingtonpost.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/world/",
+      "/business/",
+      "/politics/",
+      "/technology/"
+    ]
+  },
+  {
+    "name": "The Wall Street Journal",
+    "homepage": "https://www.wsj.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/world/",
+      "/business/",
+      "/economy/",
+      "/tech/"
+    ]
+  },
+  {
+    "name": "The Hill",
+    "homepage": "https://thehill.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/policy/",
+      "/homenews/",
+      "/business/",
+      "/international/"
+    ]
+  },
+  {
+    "name": "Politico",
+    "homepage": "https://www.politico.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/story/",
+      "/playbook/",
+      "/minutes/"
+    ]
+  },
+  {
+    "name": "Axios",
+    "homepage": "https://www.axios.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/20",
+      "/newsletters/",
+      "/economy/",
+      "/politics/"
+    ]
+  },
+  {
+    "name": "Newsweek",
+    "homepage": "https://www.newsweek.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/world/",
+      "/business/",
+      "/politics/",
+      "/tech-science/"
+    ]
+  },
+  {
+    "name": "TIME",
+    "homepage": "https://time.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/20",
+      "/news/",
+      "/politics/",
+      "/business/"
+    ]
+  },
+  {
+    "name": "HuffPost",
+    "homepage": "https://www.huffpost.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/entry/",
+      "/news/",
+      "/politics/",
+      "/life/"
+    ]
+  },
+  {
+    "name": "Bloomberg",
+    "homepage": "https://www.bloomberg.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/markets/",
+      "/technology/",
+      "/politics/"
+    ]
+  },
+  {
+    "name": "Financial Times",
+    "homepage": "https://www.ft.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/content/",
+      "/world/",
+      "/technology/",
+      "/markets/"
+    ]
+  },
+  {
+    "name": "MarketWatch",
+    "homepage": "https://www.marketwatch.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/story/",
+      "/economy-politics/",
+      "/investing/"
+    ]
+  },
+  {
+    "name": "Fortune",
+    "homepage": "https://fortune.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/20",
+      "/company/",
+      "/finance/",
+      "/tech/"
+    ]
+  },
+  {
+    "name": "Forbes",
+    "homepage": "https://www.forbes.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/sites/",
+      "/business/",
+      "/innovation/",
+      "/technology/"
+    ]
+  },
+  {
+    "name": "Business Insider",
+    "homepage": "https://www.businessinsider.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/economy/",
+      "/tech/",
+      "/markets/"
+    ]
+  },
+  {
+    "name": "The Economist",
+    "homepage": "https://www.economist.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/20",
+      "/finance-and-economics/",
+      "/science-and-technology/"
+    ]
+  },
+  {
+    "name": "The Hindu",
+    "homepage": "https://www.thehindu.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/business/",
+      "/sci-tech/",
+      "/sport/"
+    ]
+  },
+  {
+    "name": "Indian Express",
+    "homepage": "https://indianexpress.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/article/",
+      "/business/",
+      "/technology/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "Hindustan Times",
+    "homepage": "https://www.hindustantimes.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/world-news/",
+      "/business/",
+      "/india-news/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "Times of India",
+    "homepage": "https://timesofindia.indiatimes.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/india/",
+      "/world/",
+      "/business/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "NDTV",
+    "homepage": "https://www.ndtv.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/india-news/",
+      "/world-news/",
+      "/business/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "India Today",
+    "homepage": "https://www.indiatoday.in",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/india/",
+      "/world/",
+      "/business/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "Deccan Herald",
+    "homepage": "https://www.deccanherald.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/india/",
+      "/world/",
+      "/business/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "Firstpost",
+    "homepage": "https://www.firstpost.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/world/",
+      "/business/",
+      "/tech/",
+      "/sports/"
+    ]
+  },
+  {
+    "name": "Scroll.in",
+    "homepage": "https://scroll.in",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/article/",
+      "/latest/",
+      "/world/",
+      "/sport/"
+    ]
+  },
+  {
+    "name": "The Wire",
+    "homepage": "https://thewire.in",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/world/",
+      "/business/",
+      "/tech/",
+      "/politics/"
+    ]
+  },
+  {
+    "name": "ThePrint",
+    "homepage": "https://theprint.in",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/india/",
+      "/world/",
+      "/economy/",
+      "/defence/"
+    ]
+  },
+  {
+    "name": "The Economic Times",
+    "homepage": "https://economictimes.indiatimes.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/markets/",
+      "/industry/",
+      "/tech/"
+    ]
+  },
+  {
+    "name": "Mint",
+    "homepage": "https://www.livemint.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/market/",
+      "/industry/",
+      "/technology/"
+    ]
+  },
+  {
+    "name": "Moneycontrol",
+    "homepage": "https://www.moneycontrol.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/economy/",
+      "/business/",
+      "/technology/"
+    ]
+  },
+  {
+    "name": "Business Standard",
+    "homepage": "https://www.business-standard.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/india-news/",
+      "/economy/",
+      "/markets/",
+      "/technology/"
+    ]
+  },
+  {
+    "name": "Wired",
+    "homepage": "https://www.wired.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/story/",
+      "/tag/",
+      "/category/"
+    ]
+  },
+  {
+    "name": "CNET",
+    "homepage": "https://www.cnet.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/tech/",
+      "/science/"
+    ]
+  },
+  {
+    "name": "ZDNET",
+    "homepage": "https://www.zdnet.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/article/",
+      "/home-and-office/",
+      "/security/"
+    ]
+  },
+  {
+    "name": "VentureBeat",
+    "homepage": "https://venturebeat.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/ai/",
+      "/games/",
+      "/security/",
+      "/business/"
+    ]
+  },
+  {
+    "name": "The Next Web",
+    "homepage": "https://thenextweb.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/plugged/",
+      "/insights/"
+    ]
+  },
+  {
+    "name": "Android Authority",
+    "homepage": "https://www.androidauthority.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/features/",
+      "/reviews/"
+    ]
+  },
+  {
+    "name": "XDA Developers",
+    "homepage": "https://www.xda-developers.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/features/",
+      "/guides/"
+    ]
+  },
+  {
+    "name": "Tom's Hardware",
+    "homepage": "https://www.tomshardware.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/features/",
+      "/reviews/"
+    ]
+  },
+  {
+    "name": "PCMag",
+    "homepage": "https://www.pcmag.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/articles/",
+      "/reviews/"
+    ]
+  },
+  {
+    "name": "BleepingComputer",
+    "homepage": "https://www.bleepingcomputer.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/security/",
+      "/guides/"
+    ]
+  },
+  {
+    "name": "MIT Technology Review",
+    "homepage": "https://www.technologyreview.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/20",
+      "/topic/",
+      "/news/"
+    ]
+  },
+  {
+    "name": "Nature",
+    "homepage": "https://www.nature.com/news",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/articles/",
+      "/news/",
+      "/subjects/"
+    ]
+  },
+  {
+    "name": "Scientific American",
+    "homepage": "https://www.scientificamerican.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/article/",
+      "/science/",
+      "/health/"
+    ]
+  },
+  {
+    "name": "New Scientist",
+    "homepage": "https://www.newscientist.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/article/",
+      "/topic/",
+      "/news/"
+    ]
+  },
+  {
+    "name": "Live Science",
+    "homepage": "https://www.livescience.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/health/",
+      "/space/"
+    ]
+  },
+  {
+    "name": "Space.com",
+    "homepage": "https://www.space.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/astronomy/",
+      "/space-exploration/"
+    ]
+  },
+  {
+    "name": "Medical News Today",
+    "homepage": "https://www.medicalnewstoday.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/articles/",
+      "/news/"
+    ]
+  },
+  {
+    "name": "Healthline",
+    "homepage": "https://www.healthline.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/health-news/",
+      "/nutrition/",
+      "/wellness/"
+    ]
+  },
+  {
+    "name": "Verywell Health",
+    "homepage": "https://www.verywellhealth.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/conditions/",
+      "/prevention/"
+    ]
+  },
+  {
+    "name": "WHO",
+    "homepage": "https://www.who.int",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news-room/",
+      "/emergencies/",
+      "/health-topics/"
+    ]
+  },
+  {
+    "name": "CDC Newsroom",
+    "homepage": "https://www.cdc.gov/media",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/media/",
+      "/mmwr/",
+      "/news/"
+    ]
+  },
+  {
+    "name": "Sky Sports",
+    "homepage": "https://www.skysports.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/football/",
+      "/cricket/",
+      "/f1/",
+      "/news/"
+    ]
+  },
+  {
+    "name": "Yahoo Sports",
+    "homepage": "https://sports.yahoo.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/nfl/",
+      "/nba/",
+      "/cricket/"
+    ]
+  },
+  {
+    "name": "Sporting News",
+    "homepage": "https://www.sportingnews.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/us/",
+      "/in/",
+      "/cricket/",
+      "/nba/"
+    ]
+  },
+  {
+    "name": "CricTracker",
+    "homepage": "https://www.crictracker.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/cricket-news/",
+      "/stories/",
+      "/match-preview/"
+    ]
+  },
+  {
+    "name": "Goal.com",
+    "homepage": "https://www.goal.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/en/",
+      "/news/",
+      "/live-scores/"
+    ]
+  },
+  {
+    "name": "Variety",
+    "homepage": "https://variety.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/20",
+      "/tv/",
+      "/film/",
+      "/music/"
+    ]
+  },
+  {
+    "name": "The Hollywood Reporter",
+    "homepage": "https://www.hollywoodreporter.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/movies/",
+      "/tv/"
+    ]
+  },
+  {
+    "name": "Deadline",
+    "homepage": "https://deadline.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/20",
+      "/category/",
+      "/news/"
+    ]
+  },
+  {
+    "name": "Billboard",
+    "homepage": "https://www.billboard.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/music/",
+      "/culture/",
+      "/business/"
+    ]
+  },
+  {
+    "name": "Rolling Stone",
+    "homepage": "https://www.rollingstone.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/music/",
+      "/culture/",
+      "/politics/"
+    ]
+  },
+  {
+    "name": "Vogue",
+    "homepage": "https://www.vogue.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/article/",
+      "/fashion/",
+      "/beauty/"
+    ]
+  },
+  {
+    "name": "GQ",
+    "homepage": "https://www.gq.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/story/",
+      "/style/",
+      "/culture/"
+    ]
+  },
+  {
+    "name": "Eater",
+    "homepage": "https://www.eater.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/20",
+      "/news/",
+      "/restaurant/"
+    ]
+  },
+  {
+    "name": "Food & Wine",
+    "homepage": "https://www.foodandwine.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/news/",
+      "/recipes/",
+      "/restaurants/"
+    ]
+  },
+  {
+    "name": "Conde Nast Traveler",
+    "homepage": "https://www.cntraveler.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/story/",
+      "/destinations/",
+      "/inspiration/"
+    ]
+  },
+  {
+    "name": "Lonely Planet",
+    "homepage": "https://www.lonelyplanet.com",
+    "skipHomepage": false,
+    "forceSitemaps": true,
+    "allowedPaths": [
+      "/articles/",
+      "/news/",
+      "/guides/"
+    ]
+  }
+]
