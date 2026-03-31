@@ -144,7 +144,7 @@ const ArticleDetail = () => {
   const runSummary = async () => {
     if (!article?._id) return;
     if (!meData?.user) {
-      navigate("/auth");
+      navigate("/login");
       return;
     }
     setSummaryLoading(true);

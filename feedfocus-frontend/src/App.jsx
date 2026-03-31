@@ -1,4 +1,9 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import Layout from "./layout/Layout";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
@@ -35,7 +40,11 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-          <Route path="/auth" element={<Auth />} />
+          <Route path="/login" element={<Auth defaultMode="login" />} />
+          <Route path="/register" element={<Auth defaultMode="register" />} />
+          <Route path="/signup" element={<Navigate to="/register" replace />} />
+          <Route path="/signin" element={<Navigate to="/login" replace />} />
+          <Route path="/auth" element={<Navigate to="/login" replace />} />
           <Route path="/tryit" element={<Landing />} />
           <Route
             path="/profile"

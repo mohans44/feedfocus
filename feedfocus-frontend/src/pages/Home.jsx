@@ -590,7 +590,7 @@ const Home = () => {
 
   const onBookmark = async (article) => {
     if (!meData?.user) {
-      navigate("/auth");
+      navigate("/login");
       return;
     }
     const articleId = article._id;
@@ -729,7 +729,7 @@ const Home = () => {
             <div className="flex flex-wrap gap-3">
               <Button
                 className="rounded-xl shadow-[0_10px_22px_-12px_hsl(var(--primary)/0.7)] transition duration-300 hover:-translate-y-0.5"
-                onClick={() => navigate("/auth")}
+                onClick={() => navigate("/login")}
               >
                 Sign in to personalize
               </Button>
@@ -855,7 +855,7 @@ const Home = () => {
                         }
                         onShowSummary={async (selectedArticle) => {
                           if (!meData?.user) {
-                            navigate("/auth");
+                            navigate("/login");
                             return;
                           }
                           const articleId = selectedArticle?._id;

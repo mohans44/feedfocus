@@ -7,7 +7,7 @@ import { Input } from "../components/ui/input";
 import { getMe, loginUser, registerUser } from "../utils/api";
 import { PREFERENCE_OPTIONS } from "../constants/preferences";
 
-const Auth = () => {
+const Auth = ({ defaultMode = "login" }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState({
@@ -19,7 +19,9 @@ const Auth = () => {
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] = useState(
+    defaultMode === "register" ? "register" : "login",
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const authInputClass =
@@ -35,6 +37,11 @@ const Auth = () => {
       navigate("/", { replace: true });
     }
   }, [meData, navigate]);
+
+  useEffect(() => {
+    setMode(defaultMode === "register" ? "register" : "login");
+    setError("");
+  }, [defaultMode]);
 
   const onChange = (event) => {
     setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }));

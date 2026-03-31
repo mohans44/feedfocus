@@ -64,7 +64,7 @@ const Landing = () => {
             <div className="flex flex-wrap gap-3">
               <Button
                 size="lg"
-                onClick={() => navigate("/auth")}
+                onClick={() => navigate("/login")}
                 className="gap-2"
               >
                 Get started free

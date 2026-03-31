@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
+  X,
   Bookmark,
   Sun,
   Moon,
@@ -112,6 +113,17 @@ const Navbar = () => {
       document.removeEventListener("touchstart", onPointerDown);
       document.removeEventListener("mousedown", onPointerDown);
     };
+  }, [showMobileSearch]);
+
+  useEffect(() => {
+    if (!showMobileSearch) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setShowMobileSearch(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [showMobileSearch]);
 
   useEffect(() => {
@@ -285,15 +297,27 @@ const Navbar = () => {
         <form
           className="hidden max-w-xl flex-1 items-center md:flex"
           onSubmit={submitSearch}
+          aria-label="Search articles"
         >
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/55" />
             <Input
               placeholder="Search news, topics, publishers…"
-              className="h-9 rounded-full border-border/70 bg-card/92 pl-11 text-sm placeholder:text-muted-foreground/55 transition duration-300 focus-visible:bg-card focus-visible:ring-primary/40"
+              className="h-9 rounded-full border-border/70 bg-card/92 pl-11 pr-11 text-sm placeholder:text-muted-foreground/55 transition duration-300 focus-visible:bg-card focus-visible:ring-primary/40"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              autoComplete="off"
             />
+            {query ? (
+              <button
+                type="button"
+                aria-label="Clear search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
+                onClick={() => setQuery("")}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
           </div>
         </form>
 
@@ -303,6 +327,7 @@ const Navbar = () => {
             size="icon"
             type="button"
             aria-label="Search"
+            aria-expanded={showMobileSearch}
             className="md:hidden"
             ref={mobileSearchToggleRef}
             onClick={() => setShowMobileSearch((prev) => !prev)}
@@ -329,7 +354,7 @@ const Navbar = () => {
             type="button"
             aria-label="Bookmarks"
             className={`hidden rounded-full transition duration-300 sm:inline-flex ${location.pathname === "/bookmarks" ? "bg-muted text-primary" : "hover:bg-muted/70"}`}
-            onClick={() => navigate(isLoggedIn ? "/bookmarks" : "/auth")}
+            onClick={() => navigate(isLoggedIn ? "/bookmarks" : "/login")}
             disabled={!isAuthResolved}
           >
             <Bookmark className="h-[18px] w-[18px]" />
@@ -348,7 +373,7 @@ const Navbar = () => {
             <Button
               size="sm"
               type="button"
-              onClick={() => navigate("/auth")}
+              onClick={() => navigate("/login")}
               className="rounded-full px-4 text-xs font-semibold"
             >
               Sign in
@@ -363,17 +388,29 @@ const Navbar = () => {
         <form
           className="container pb-2.5 md:hidden"
           onSubmit={submitSearch}
+          aria-label="Search articles"
           ref={mobileSearchFormRef}
         >
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/55" />
             <Input
               placeholder="Search news, topics, publishers…"
-              className="h-10 rounded-full border-border/70 bg-card/92 pl-11 text-sm transition duration-300 focus-visible:bg-card"
+              className="h-10 rounded-full border-border/70 bg-card/92 pl-11 pr-11 text-sm transition duration-300 focus-visible:bg-card"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              autoComplete="off"
               autoFocus
             />
+            {query ? (
+              <button
+                type="button"
+                aria-label="Clear search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground transition hover:bg-muted/80 hover:text-foreground"
+                onClick={() => setQuery("")}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
           </div>
         </form>
       ) : null}
