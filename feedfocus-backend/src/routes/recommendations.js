@@ -1,11 +1,7 @@
 import express from "express";
 import { authRequired } from "../middleware/auth.js";
-import { Article } from "../models/Article.js";
-import {
-  enrichArticleTopics,
-  normalizeTopic,
-  preferenceScore,
-} from "../utils/topics.js";
+import { normalizeTopic } from "../utils/topics.js";
+import { fetchLiveNews } from "../utils/liveNews.js";
 
 const router = express.Router();
 
@@ -25,45 +21,19 @@ router.get("/for-you", authRequired, async (req, res) => {
       ),
     );
 
-    const recentItems = await Article.find({})
-      .sort({ publishedAt: -1 })
-      .limit(320)
-      .lean();
+    const feed = await fetchLiveNews({
+      limit: Math.max(safeLimit * 3, 30),
+      preferences: normalizedPreferences,
+      topic: normalizedPreferences[0] || undefined,
+    });
 
-    const freshnessWindowMs = 7 * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-
-    const rankedAll = recentItems
-      .filter((item) => {
-        const publishedAt = new Date(item.publishedAt).getTime();
-        return (
-          Number.isFinite(publishedAt) && now - publishedAt <= freshnessWindowMs
-        );
-      })
-      .map((object) => {
-        const enriched = enrichArticleTopics(object);
-        const score = preferenceScore(enriched, normalizedPreferences);
-        return {
-          ...enriched,
-          aiScore: Number(score.toFixed(3)),
-          reason:
-            normalizedPreferences.length > 0
-              ? "Ranked by preference match, freshness, quality, and source diversity"
-              : "Ranked by freshness, quality, and source diversity",
-        };
-      })
-      .sort((a, b) => b.aiScore - a.aiScore);
-
-    const ranked =
-      normalizedPreferences.length > 0
-        ? rankedAll.filter(
-            (item) =>
-              normalizedPreferences.includes(item.primaryCategory) ||
-              (item.topics || []).some((topic) =>
-                normalizedPreferences.includes(topic),
-              ),
-          )
-        : rankedAll;
+    const ranked = (feed.items || []).map((item) => ({
+      ...item,
+      reason:
+        normalizedPreferences.length > 0
+          ? "Ranked by your preferences, recency, and source quality"
+          : "Ranked by recency and source quality",
+    }));
 
     // Keep source and category diversity in top picks.
     const payload = [];
@@ -87,9 +57,7 @@ router.get("/for-you", authRequired, async (req, res) => {
     if (payload.length < safeLimit) {
       for (const item of ranked) {
         if (payload.length >= safeLimit) break;
-        if (
-          !payload.find((entry) => entry._id.toString() === item._id.toString())
-        ) {
+        if (!payload.find((entry) => String(entry._id) === String(item._id))) {
           payload.push(item);
         }
       }

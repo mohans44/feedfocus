@@ -28,9 +28,11 @@ const parseAuthError = (error) => {
     }
     return { status: 409, error: "Account already exists" };
   }
+
   if (error?.name === "ValidationError") {
     return { status: 400, error: "Invalid registration data" };
   }
+
   if (
     error instanceof TypeError &&
     String(error?.message || "")
@@ -39,6 +41,7 @@ const parseAuthError = (error) => {
   ) {
     return { status: 500, error: "Server cookie configuration error" };
   }
+
   return { status: 500, error: "Registration failed" };
 };
 
@@ -48,26 +51,29 @@ router.post("/register", async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ error: "Username and password required" });
     }
+
     if (password.length < 8) {
       return res
         .status(400)
         .json({ error: "Password must be at least 8 characters" });
     }
+
     const normalizedUsername = String(username).toLowerCase().trim();
     if (!usernameRegex.test(normalizedUsername)) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Username must be 3-30 chars and can include letters, numbers, ., -, _",
-        });
+      return res.status(400).json({
+        error:
+          "Username must be 3-30 chars and can include letters, numbers, ., -, _",
+      });
     }
+
     const normalizedEmail = email
       ? String(email).toLowerCase().trim()
       : `${normalizedUsername}@feedfocus.local`;
+
     if (!emailRegex.test(normalizedEmail)) {
       return res.status(400).json({ error: "Invalid email format" });
     }
+
     const normalizedPreferences = Array.isArray(preferences)
       ? [
           ...new Set(
@@ -77,18 +83,22 @@ router.post("/register", async (req, res) => {
           ),
         ].slice(0, 25)
       : [];
+
     if (normalizedPreferences.length < 4) {
       return res.status(400).json({ error: "Select at least 4 preferences" });
     }
+
     const existing = await User.findOne({
       $or: [{ email: normalizedEmail }, { username: normalizedUsername }],
     });
+
     if (existing?.username === normalizedUsername) {
       return res.status(409).json({ error: "Username already in use" });
     }
     if (existing?.email === normalizedEmail) {
       return res.status(409).json({ error: "Email already in use" });
     }
+
     const passwordHash = await bcrypt.hash(password, 12);
     const user = await User.create({
       username: normalizedUsername,
@@ -96,8 +106,10 @@ router.post("/register", async (req, res) => {
       passwordHash,
       preferences: normalizedPreferences,
     });
+
     const token = signToken({ sub: user._id.toString() });
     res.cookie(env.cookieName, token, cookieOptions);
+
     return res.status(201).json({
       token,
       user: {
@@ -120,26 +132,33 @@ router.post("/login", async (req, res) => {
     const loginId = String(identifier || username || email || "")
       .toLowerCase()
       .trim();
+
     if (!loginId || !password) {
       return res
         .status(400)
         .json({ error: "Username/email and password required" });
     }
+
     const lookup = emailRegex.test(loginId)
       ? { email: loginId }
       : { username: loginId };
+
     const user = await User.findOne(lookup);
     if (!user) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
+
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
+
     user.lastLogin = new Date();
     await user.save();
+
     const token = signToken({ sub: user._id.toString() });
     res.cookie(env.cookieName, token, cookieOptions);
+
     return res.status(200).json({
       token,
       user: {

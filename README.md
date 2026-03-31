@@ -4,7 +4,6 @@ Feed Focus is a modern news platform with:
 
 - `feed-focus-frontend`: React + Vite + Tailwind + shadcn-style UI
 - `feed-focus-backend-node`: Node + Express + MongoDB API (httpOnly cookie auth, 30-day session)
-- `feed-focus-crawler`: crawler worker that ingests trusted publisher articles into MongoDB (publisher-driven feeds/sitemaps)
 
 `feed-focus-backend` (Spring Boot) is retained as the legacy implementation.
 
@@ -40,15 +39,6 @@ npm install
 npm run dev
 ```
 
-### 4) Run crawler manually
-
-```bash
-cd /Users/mohansai/Developer/feedfocus-v2/feed-focus-crawler
-cp .env.example .env
-npm install
-npm run crawl
-```
-
 ## Frontend Environment
 
 In `feed-focus-frontend/.env`:
@@ -73,4 +63,3 @@ VITE_API_BASE_URL=http://localhost:8080
 
 - Frontend: Vercel (or any static host)
 - API: Vercel (`feed-focus-backend-node/vercel.json` included)
-- Crawler: GitHub Actions (`.github/workflows/crawl.yml`) with `MONGO_URI` repo secret

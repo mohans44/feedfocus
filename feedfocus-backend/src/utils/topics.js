@@ -324,47 +324,6 @@ export const enrichArticleTopics = (article = {}) => {
   };
 };
 
-export const isArticleInTopic = (article = {}, topic = "") => {
-  const normalized = normalizeTopic(topic);
-  if (!normalized || normalized === "top-stories" || normalized === "for-you") {
-    return true;
-  }
-  if (article.primaryCategory === normalized) {
-    return true;
-  }
-
-  const scores = inferTopicScoresFromArticle(article);
-  const topHit = scores[0];
-  if (!topHit) return false;
-  return topHit.topic === normalized && topHit.score >= 2.5;
-};
-
-export const topicFilterClause = (topic) => {
-  const normalized = normalizeTopic(topic);
-  if (!normalized || normalized === "top-stories" || normalized === "for-you") {
-    return {};
-  }
-
-  const keywords = TOPIC_KEYWORDS[normalized] || [];
-
-  if (!keywords.length) {
-    return {
-      $or: [{ topics: { $in: [normalized] } }, { primaryCategory: normalized }],
-    };
-  }
-
-  const keywordPattern = keywords.map((item) => escapeRegex(item)).join("|");
-  return {
-    $or: [
-      { topics: { $in: [normalized] } },
-      { primaryCategory: normalized },
-      { title: { $regex: keywordPattern, $options: "i" } },
-      { summary: { $regex: keywordPattern, $options: "i" } },
-      { content: { $regex: keywordPattern, $options: "i" } },
-    ],
-  };
-};
-
 export const preferenceScore = (article, preferences = []) => {
   const normalizedPrefs = preferences
     .map((pref) => normalizeTopic(pref) || String(pref).toLowerCase())

@@ -1,57 +1,15 @@
 import express from "express";
-import mongoose from "mongoose";
-import { Article } from "../models/Article.js";
 import { User } from "../models/User.js";
 import { authRequired } from "../middleware/auth.js";
-import {
-  enrichArticleTopics,
-  isArticleInTopic,
-  normalizeTopic,
-  topicFilterClause,
-} from "../utils/topics.js";
+import { enrichArticleTopics, normalizeTopic } from "../utils/topics.js";
+import { fetchLiveNews, getLiveArticleById } from "../utils/liveNews.js";
 
 const router = express.Router();
-const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const isValidObjectId = (value) =>
-  mongoose.Types.ObjectId.isValid(String(value || ""));
 const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const CLOUDFLARE_AI_MODEL =
   process.env.CLOUDFLARE_AI_MODEL || "@cf/meta/llama-3.1-8b-instruct";
 const AI_SUMMARY_DAILY_LIMIT = Number(process.env.AI_SUMMARY_DAILY_LIMIT || 15);
-
-const summarizeText = (content = "", maxSentences = 4) => {
-  const clean = String(content).replace(/\s+/g, " ").trim();
-  if (!clean) return [];
-  const rawSentences = clean
-    .split(/(?<=[.!?])\s+/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 35);
-  if (!rawSentences.length) return [];
-
-  const scored = rawSentences.map((sentence, index) => {
-    const score =
-      (sentence.length > 90 ? 1.2 : 0.8) +
-      (/\b(according|said|announced|reported|confirmed|expects)\b/i.test(
-        sentence,
-      )
-        ? 0.6
-        : 0) +
-      (/\b(today|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(
-        sentence,
-      )
-        ? 0.3
-        : 0) -
-      index * 0.015;
-    return { sentence, score, index };
-  });
-
-  return scored
-    .sort((a, b) => b.score - a.score)
-    .slice(0, maxSentences)
-    .sort((a, b) => a.index - b.index)
-    .map((item) => item.sentence);
-};
 
 const utcDateKey = () => new Date().toISOString().slice(0, 10);
 
@@ -384,74 +342,25 @@ router.get("/", async (req, res) => {
       : 20;
     const normalizedTopic = normalizeTopic(topic);
 
-    const filterClauses = [];
-    if (cursor) {
-      const cursorDate = new Date(cursor);
-      if (!Number.isNaN(cursorDate.getTime())) {
-        filterClauses.push({ publishedAt: { $lt: cursorDate } });
-      }
-    }
-    if (
-      topic &&
-      (!normalizedTopic ||
-        normalizedTopic === "top-stories" ||
-        normalizedTopic === "for-you")
-    ) {
-      const topicClause = topicFilterClause(topic);
-      if (Object.keys(topicClause).length) filterClauses.push(topicClause);
-    }
-    if (publisher) {
-      filterClauses.push({ publisher: String(publisher).trim() });
-    }
-    if (search) {
-      const pattern = escapeRegex(String(search).trim());
-      filterClauses.push({
-        $or: [
-          { title: { $regex: pattern, $options: "i" } },
-          { summary: { $regex: pattern, $options: "i" } },
-          { content: { $regex: pattern, $options: "i" } },
-        ],
-      });
-    }
-    const filter = filterClauses.length ? { $and: filterClauses } : {};
+    const feed = await fetchLiveNews({
+      limit: safeLimit,
+      cursor,
+      topic: normalizedTopic || topic,
+      search,
+    });
 
-    let data = [];
-    let hasMore = false;
+    const filteredByPublisher = publisher
+      ? (feed.items || []).filter(
+          (item) =>
+            String(item.publisher || "").toLowerCase() ===
+            String(publisher).trim().toLowerCase(),
+        )
+      : feed.items || [];
 
-    if (
-      normalizedTopic &&
-      normalizedTopic !== "top-stories" &&
-      normalizedTopic !== "for-you"
-    ) {
-      const candidatePoolSize = Math.min(Math.max(safeLimit * 14, 180), 800);
-      const candidates = await Article.find(filter)
-        .sort({ publishedAt: -1 })
-        .limit(candidatePoolSize)
-        .lean();
-
-      const matched = candidates
-        .map((item) => enrichArticleTopics(item))
-        .filter((item) => isArticleInTopic(item, normalizedTopic));
-
-      hasMore = matched.length > safeLimit;
-      data = hasMore ? matched.slice(0, safeLimit) : matched;
-    } else {
-      const articles = await Article.find(filter)
-        .sort({ publishedAt: -1 })
-        .limit(safeLimit + 1)
-        .lean();
-
-      hasMore = articles.length > safeLimit;
-      data = (hasMore ? articles.slice(0, safeLimit) : articles).map((item) =>
-        enrichArticleTopics(item),
-      );
-    }
-
-    const nextCursor = hasMore
-      ? data[data.length - 1].publishedAt.toISOString()
-      : null;
-
-    return res.json({ items: data, nextCursor });
+    return res.json({
+      items: filteredByPublisher,
+      nextCursor: feed.nextCursor,
+    });
   } catch (error) {
     return res.status(500).json({ error: "Failed to fetch articles" });
   }
@@ -459,15 +368,12 @@ router.get("/", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(404).json({ error: "Article not found" });
-    }
-    const article = await Article.findById(req.params.id).lean();
+    const article = await getLiveArticleById({ id: req.params.id });
     if (!article) {
       return res.status(404).json({ error: "Article not found" });
     }
 
-    return res.json({ item: enrichArticleTopics(article) });
+    return res.json({ item: article });
   } catch (error) {
     return res.status(500).json({ error: "Failed to fetch article" });
   }
@@ -475,24 +381,9 @@ router.get("/:id", async (req, res) => {
 
 const handleAiCorrection = async (req, res) => {
   try {
-    if (!isValidObjectId(req.params.id)) {
-      return res.status(404).json({ error: "Article not found" });
-    }
-    const force = String(req.query.force || "") === "1";
-    const article = await Article.findById(req.params.id);
+    const article = await getLiveArticleById({ id: req.params.id });
     if (!article) {
       return res.status(404).json({ error: "Article not found" });
-    }
-
-    if (article.aiCorrected?.content && !force) {
-      return res.json({
-        articleId: article._id,
-        correctedTitle: article.aiCorrected.title || article.title,
-        correctedContent: article.aiCorrected.content,
-        highlights: article.aiCorrected.highlights || [],
-        generatedAt: article.aiCorrected.generatedAt,
-        model: article.aiCorrected.model,
-      });
     }
 
     const sourceContent = String(
@@ -504,9 +395,7 @@ const handleAiCorrection = async (req, res) => {
         .json({ error: "Article has no content to correct" });
     }
 
-    const corrected = await generateCloudflareCorrection(article.toObject());
-    article.aiCorrected = corrected;
-    await article.save();
+    const corrected = await generateCloudflareCorrection(article);
 
     return res.json({
       articleId: article._id,
@@ -533,26 +422,9 @@ router.get("/:id/ai-correct", handleAiCorrection);
 const handleAiSummary = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!isValidObjectId(id)) {
-      return res.status(404).json({ error: "Article not found" });
-    }
-    const force = String(req.query.force || "") === "1";
-
-    const article = await Article.findById(id);
+    const article = await getLiveArticleById({ id });
     if (!article) {
       return res.status(404).json({ error: "Article not found" });
-    }
-
-    if (article.aiSummary?.text && !force) {
-      return res.json({
-        articleId: article._id,
-        summary: article.aiSummary.text,
-        keyPoints: article.aiSummary.keyPoints || [],
-        category:
-          article.aiSummary.category || article.primaryCategory || "world",
-        generatedAt: article.aiSummary.generatedAt,
-        model: article.aiSummary.model || "heuristic-1min-v1",
-      });
     }
 
     const quota = await consumeAiSummaryQuota(req.user._id);
@@ -564,14 +436,7 @@ const handleAiSummary = async (req, res) => {
       });
     }
 
-    const aiSummary = await generateCloudflareSummary(article.toObject());
-    article.aiSummary = aiSummary;
-    if (!article.primaryCategory || article.primaryCategory === "world") {
-      const enriched = enrichArticleTopics(article.toObject());
-      article.topics = enriched.topics;
-      article.primaryCategory = enriched.primaryCategory;
-    }
-    await article.save();
+    const aiSummary = await generateCloudflareSummary(article);
 
     return res.json({
       articleId: article._id,

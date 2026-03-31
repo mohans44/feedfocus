@@ -2,6 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import { authRequired } from "../middleware/auth.js";
 import { User } from "../models/User.js";
+import { getLiveArticleById } from "../utils/liveNews.js";
 
 const router = express.Router();
 
@@ -40,16 +41,22 @@ router.put("/me", authRequired, async (req, res) => {
     if (password !== undefined) {
       const nextPassword = String(password);
       if (nextPassword.length < 8) {
-        return res.status(400).json({ error: "Password must be at least 8 characters" });
+        return res
+          .status(400)
+          .json({ error: "Password must be at least 8 characters" });
       }
       updates.passwordHash = await bcrypt.hash(nextPassword, 12);
     }
 
     if (!Object.keys(updates).length) {
-      return res.status(400).json({ error: "No valid profile updates provided" });
+      return res
+        .status(400)
+        .json({ error: "No valid profile updates provided" });
     }
 
-    const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true });
+    const user = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+    });
     return res.json({
       user: {
         id: user._id,
@@ -79,7 +86,7 @@ router.put("/preferences", authRequired, async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { preferences: normalized },
-      { new: true }
+      { new: true },
     );
 
     return res.json({ preferences: user.preferences });
@@ -89,8 +96,12 @@ router.put("/preferences", authRequired, async (req, res) => {
 });
 
 router.get("/bookmarks", authRequired, async (req, res) => {
-  const user = await User.findById(req.user._id).populate("bookmarks");
-  return res.json({ items: user.bookmarks || [] });
+  const user = await User.findById(req.user._id).select("bookmarks");
+  const ids = Array.isArray(user?.bookmarks) ? user.bookmarks : [];
+  const resolved = await Promise.all(
+    ids.map(async (id) => getLiveArticleById({ id })),
+  );
+  return res.json({ items: resolved.filter(Boolean) });
 });
 
 router.post("/bookmarks", authRequired, async (req, res) => {
@@ -99,8 +110,12 @@ router.post("/bookmarks", authRequired, async (req, res) => {
     if (!articleId) {
       return res.status(400).json({ error: "articleId is required" });
     }
+    const article = await getLiveArticleById({ id: articleId });
+    if (!article) {
+      return res.status(404).json({ error: "Article not found" });
+    }
     await User.findByIdAndUpdate(req.user._id, {
-      $addToSet: { bookmarks: articleId },
+      $addToSet: { bookmarks: String(articleId) },
     });
     return res.status(201).json({ success: true });
   } catch (error) {
@@ -111,7 +126,7 @@ router.post("/bookmarks", authRequired, async (req, res) => {
 router.delete("/bookmarks/:id", authRequired, async (req, res) => {
   try {
     await User.findByIdAndUpdate(req.user._id, {
-      $pull: { bookmarks: req.params.id },
+      $pull: { bookmarks: String(req.params.id) },
     });
     return res.json({ success: true });
   } catch (error) {
