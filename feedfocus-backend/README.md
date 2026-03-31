@@ -4,7 +4,7 @@ Express + MongoDB API for Feed Focus.
 
 ## Features
 
-- Cookie-based JWT auth (`httpOnly`, 30-day session)
+- JWT auth with `httpOnly` cookie session plus bearer-token fallback (30-day session)
 - Security middleware
 - Articles API with cursor pagination, topic/publisher/search filters
 - User profile, preferences, bookmarks

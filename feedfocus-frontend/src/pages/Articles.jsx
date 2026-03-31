@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ArrowUp, Bookmark, BookmarkCheck, Sparkles, X } from "lucide-react";
 import {
   addBookmark,
@@ -12,6 +16,10 @@ import {
 } from "../utils/api";
 import ArticleCard from "../components/ArticleCard";
 import { Button } from "../components/ui/button";
+import ErrorState from "../components/ErrorState";
+import AiSummaryDialog from "../components/AiSummaryDialog";
+import { useAiSummary } from "../hooks/useAiSummary";
+import VirtualArticleGrid from "../components/VirtualArticleGrid";
 
 const Articles = ({ title = "All Articles", useSearchQuery = false }) => {
   const queryClient = useQueryClient();
@@ -21,12 +29,7 @@ const Articles = ({ title = "All Articles", useSearchQuery = false }) => {
     ? searchParams.get("q") || undefined
     : searchParams.get("q") || undefined;
   const [items, setItems] = useState([]);
-  const [cursor, setCursor] = useState(null);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [showGoTop, setShowGoTop] = useState(false);
-  const [aiLoadingId, setAiLoadingId] = useState(null);
-  const [aiSummaryById, setAiSummaryById] = useState({});
   const [activeSummaryArticle, setActiveSummaryArticle] = useState(null);
   const [bookmarkBusyId, setBookmarkBusyId] = useState(null);
   const sentinelRef = useRef(null);
@@ -40,9 +43,30 @@ const Articles = ({ title = "All Articles", useSearchQuery = false }) => {
     [topic, q],
   );
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["articles-initial", params],
-    queryFn: () => getArticles(params),
+  const fetchArticlesPage = async ({ pageParam }) => {
+    const response = await getArticles({
+      ...params,
+      cursor: pageParam || undefined,
+    });
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    return response;
+  };
+
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ["articles-infinite", params],
+    queryFn: fetchArticlesPage,
+    getNextPageParam: (lastPage) => lastPage?.nextCursor || undefined,
     placeholderData: (prev) => prev,
   });
   const { data: meData } = useQuery({
@@ -59,36 +83,29 @@ const Articles = ({ title = "All Articles", useSearchQuery = false }) => {
     () => new Set((bookmarksData?.items || []).map((item) => item._id)),
     [bookmarksData],
   );
+  const preferences = meData?.user?.preferences || [];
+  const { aiLoadingId, aiSummaryById, requestSummary, hasSummary } =
+    useAiSummary({ fetchSummary: getAiSummary });
 
   useEffect(() => {
-    const initialItems = data?.items || [];
-    setItems(initialItems);
-    setCursor(data?.nextCursor || null);
-    setHasMore(Boolean(data?.nextCursor));
+    const flattened = data?.pages
+      ? data.pages.flatMap((page) => page.items || [])
+      : data?.items || [];
+    setItems(flattened);
   }, [data]);
-
-  const loadMore = async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    const next = await getArticles({ ...params, cursor: cursor || undefined });
-    setItems((prev) => [...prev, ...(next.items || [])]);
-    setCursor(next.nextCursor || null);
-    setHasMore(Boolean(next.nextCursor));
-    setLoadingMore(false);
-  };
 
   useEffect(() => {
     const node = sentinelRef.current;
-    if (!node || !hasMore) return;
+    if (!node || !hasNextPage) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) loadMore();
+        if (entries[0]?.isIntersecting) fetchNextPage();
       },
       { rootMargin: "400px 0px" },
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [cursor, hasMore, loadingMore]);
+  }, [hasNextPage, fetchNextPage]);
 
   useEffect(() => {
     const onScroll = () => setShowGoTop(window.scrollY > 700);
@@ -97,14 +114,7 @@ const Articles = ({ title = "All Articles", useSearchQuery = false }) => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => {
-    if (!activeSummaryArticle?._id) return undefined;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [activeSummaryArticle?._id]);
+  const errorMessage = isError ? error?.message : "";
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -126,94 +136,111 @@ const Articles = ({ title = "All Articles", useSearchQuery = false }) => {
         </div>
       ) : null}
 
-      {!isLoading && !items.length ? (
+      {isError ? (
+        <ErrorState
+          title="Could not load articles"
+          message={errorMessage || "Please try again in a moment."}
+          onAction={refetch}
+        />
+      ) : null}
+
+      {!isLoading && !isError && !items.length ? (
         <p className="py-2 text-center text-sm text-muted-foreground">
-          End of the road... for now. Our news robots are out fetching the next scoop.
+          End of the road... for now. Our news robots are out fetching the next
+          scoop.
         </p>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {items.map((article) => (
-          <div key={article._id || article.url}>
-            <ArticleCard
-              article={article}
-              actions={
-                article?._id && meData?.user ? (
-                  <div className="flex w-full flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={bookmarkBusyId === article._id}
-                      onClick={async () => {
-                        const articleId = article._id;
-                        if (!articleId) return;
-                        setBookmarkBusyId(articleId);
-                        if (bookmarkIdSet.has(articleId)) await removeBookmark(articleId);
-                        else await addBookmark(articleId);
-                        await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
-                        setBookmarkBusyId(null);
-                      }}
-                    >
-                      {bookmarkIdSet.has(article._id) ? (
-                        <BookmarkCheck className="h-4 w-4 text-primary" />
-                      ) : (
-                        <Bookmark className="h-4 w-4" />
-                      )}
-                      {bookmarkIdSet.has(article._id) ? "Bookmarked" : "Bookmark"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="default"
-                      disabled={aiLoadingId === article._id}
-                      onClick={async () => {
-                        if (activeSummaryArticle?._id === article._id) {
-                          setActiveSummaryArticle(null);
-                          return;
-                        }
-                        if (
-                          aiSummaryById[article._id] &&
-                          !aiSummaryById[article._id].error
-                        ) {
+      {!isLoading && !isError && items.length ? (
+        <VirtualArticleGrid
+          items={items}
+          className="mt-1"
+          renderItem={(article) => (
+            <div key={article._id || article.url}>
+              <ArticleCard
+                article={article}
+                showWhy={Boolean(meData?.user)}
+                preferences={preferences}
+                fixedHeight
+                actions={
+                  article?._id && meData?.user ? (
+                    <div className="flex w-full flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={bookmarkBusyId === article._id}
+                        onClick={async () => {
+                          const articleId = article._id;
+                          if (!articleId) return;
+                          setBookmarkBusyId(articleId);
+                          if (bookmarkIdSet.has(articleId))
+                            await removeBookmark(articleId);
+                          else await addBookmark(articleId);
+                          await queryClient.invalidateQueries({
+                            queryKey: ["bookmarks"],
+                          });
+                          setBookmarkBusyId(null);
+                        }}
+                      >
+                        {bookmarkIdSet.has(article._id) ? (
+                          <BookmarkCheck className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Bookmark className="h-4 w-4" />
+                        )}
+                        {bookmarkIdSet.has(article._id)
+                          ? "Bookmarked"
+                          : "Bookmark"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        disabled={aiLoadingId === article._id}
+                        onClick={async () => {
+                          if (activeSummaryArticle?._id === article._id) {
+                            setActiveSummaryArticle(null);
+                            return;
+                          }
+                          if (!hasSummary(article._id)) {
+                            const data = await requestSummary(article._id);
+                            if (data?.error) return;
+                          }
                           setActiveSummaryArticle(article);
-                          return;
-                        }
-                        setAiLoadingId(article._id);
-                        const data = await getAiSummary(article._id);
-                        setAiSummaryById((prev) => ({
-                          ...prev,
-                          [article._id]: data,
-                        }));
-                        setAiLoadingId(null);
-                        if (!data?.error) setActiveSummaryArticle(article);
-                      }}
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      {aiLoadingId === article._id
-                        ? "Generating..."
-                        : activeSummaryArticle?._id === article._id
-                          ? "Hide AI summary"
-                          : aiSummaryById[article._id]?.error
-                            ? "Retry AI summary"
-                            : "Show AI summary"}
-                    </Button>
-                  </div>
-                ) : null
-              }
-            />
-          </div>
-        ))}
-      </div>
+                        }}
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        {aiLoadingId === article._id
+                          ? "Generating..."
+                          : activeSummaryArticle?._id === article._id
+                            ? "Hide AI summary"
+                            : aiSummaryById[article._id]?.error
+                              ? "Retry AI summary"
+                              : "Show AI summary"}
+                      </Button>
+                      {aiSummaryById[article._id]?.error ? (
+                        <p className="w-full text-xs text-red-500">
+                          Failed to load AI summary:{" "}
+                          {aiSummaryById[article._id].error}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null
+                }
+              />
+            </div>
+          )}
+        />
+      ) : null}
 
       <div ref={sentinelRef} className="h-4 w-full" />
 
-      {hasMore ? (
+      {hasNextPage ? (
         <Button
           className="w-full sm:w-auto"
           variant="outline"
-          onClick={loadMore}
-          disabled={loadingMore}
+          onClick={fetchNextPage}
+          disabled={isFetchingNextPage}
         >
-          {loadingMore ? "Loading..." : "Load more"}
+          {isFetchingNextPage ? "Loading..." : "Load more"}
         </Button>
       ) : (
         <p className="py-3 text-center text-sm text-muted-foreground">
@@ -232,55 +259,20 @@ const Articles = ({ title = "All Articles", useSearchQuery = false }) => {
         </button>
       ) : null}
 
-      {activeSummaryArticle?._id &&
-      aiSummaryById[activeSummaryArticle._id]?.summary ? (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm sm:hidden"
-            onClick={() => setActiveSummaryArticle(null)}
-          />
-          <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex items-end justify-center p-0 sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[460px] sm:max-w-[94vw] sm:p-0">
-            <div className="pointer-events-auto w-full max-h-[84vh] overflow-y-auto rounded-t-3xl border border-border/90 bg-background p-4 shadow-soft sm:max-h-[72vh] sm:rounded-2xl sm:p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary sm:text-[11px]">
-                    1-minute AI summary •{" "}
-                    {aiSummaryById[activeSummaryArticle._id]?.category ||
-                      activeSummaryArticle.primaryCategory ||
-                      "world"}
-                  </p>
-                  <h3 className="mt-1 text-sm font-semibold text-foreground sm:text-base">
-                    {activeSummaryArticle.title}
-                  </h3>
-                  <p className="mt-1 text-xs text-foreground/75">
-                    {activeSummaryArticle.publisher || "Source"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  aria-label="Close summary"
-                  className="rounded-full border border-border/80 p-2 text-muted-foreground transition hover:bg-muted"
-                  onClick={() => setActiveSummaryArticle(null)}
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <p className="mt-3 text-sm leading-6 text-foreground/92">
-                {aiSummaryById[activeSummaryArticle._id]?.summary}
-              </p>
-              <div className="mt-4 flex justify-end sm:hidden">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActiveSummaryArticle(null)}
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          </div>
-        </>
-      ) : null}
+      <AiSummaryDialog
+        open={Boolean(
+          activeSummaryArticle?._id &&
+          aiSummaryById[activeSummaryArticle._id]?.summary,
+        )}
+        onClose={() => setActiveSummaryArticle(null)}
+        article={activeSummaryArticle}
+        summary={aiSummaryById[activeSummaryArticle?._id]?.summary}
+        keyPoints={aiSummaryById[activeSummaryArticle?._id]?.keyPoints || []}
+        category={
+          aiSummaryById[activeSummaryArticle?._id]?.category ||
+          activeSummaryArticle?.primaryCategory
+        }
+      />
     </div>
   );
 };

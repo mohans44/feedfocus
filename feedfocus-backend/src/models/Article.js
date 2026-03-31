@@ -21,8 +21,15 @@ const articleSchema = new mongoose.Schema(
       generatedAt: { type: Date },
       model: { type: String },
     },
+    aiCorrected: {
+      title: { type: String },
+      content: { type: String },
+      highlights: { type: [String], default: [] },
+      generatedAt: { type: Date },
+      model: { type: String },
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 articleSchema.index({ publishedAt: -1 });

@@ -61,6 +61,7 @@ router.post("/register", async (req, res) => {
     const token = signToken({ sub: user._id.toString() });
     res.cookie(env.cookieName, token, cookieOptions);
     return res.status(201).json({
+      token,
       user: { id: user._id, username: user.username, email: user.email, preferences: user.preferences },
     });
   } catch (error) {
@@ -93,6 +94,7 @@ router.post("/login", async (req, res) => {
     const token = signToken({ sub: user._id.toString() });
     res.cookie(env.cookieName, token, cookieOptions);
     return res.status(200).json({
+      token,
       user: { id: user._id, username: user.username, email: user.email, preferences: user.preferences },
     });
   } catch (error) {

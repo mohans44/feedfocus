@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Search,
   Bookmark,
@@ -19,6 +19,7 @@ import { getMe } from "../utils/api";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState(
     searchParams.get("q") || searchParams.get("search") || "",
@@ -239,15 +240,15 @@ const Navbar = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/85 bg-background/96 shadow-[0_10px_22px_-20px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 w-full border-b border-border/75 bg-background/84 shadow-[0_16px_32px_-24px_rgba(0,0,0,0.5)] backdrop-blur-2xl supports-[backdrop-filter]:bg-background/78">
       <div className="container flex h-12 items-center justify-between gap-1.5 sm:h-16 sm:gap-3">
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
-            className="rounded-full px-1 py-1"
+            className="group rounded-xl px-2 py-1 transition duration-300 hover:bg-muted/75"
             onClick={() => navigate("/")}
           >
-            <span className="font-display text-base font-semibold tracking-[0.08em] sm:text-xl">
+            <span className="font-display text-base font-semibold tracking-[0.08em] transition duration-300 group-hover:text-primary sm:text-xl">
               feedfocus
             </span>
           </button>
@@ -262,7 +263,7 @@ const Navbar = () => {
                   "noopener,noreferrer",
                 );
               }}
-              className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/70 px-1.5 py-0.5 text-[10px] text-muted-foreground sm:px-2.5 sm:py-1 sm:text-xs"
+              className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-card/92 px-1.5 py-0.5 text-[10px] text-muted-foreground shadow-sm transition duration-300 hover:border-border hover:bg-card sm:px-2.5 sm:py-1 sm:text-xs"
               aria-label="Open weather details"
               disabled={!weather?.lat || !weather?.lon}
             >
@@ -281,50 +282,45 @@ const Navbar = () => {
           ) : null}
         </div>
 
-        {isLoggedIn ? (
-          <form
-            className="hidden max-w-xl flex-1 items-center md:flex"
-            onSubmit={submitSearch}
-          >
-            <div className="relative w-full">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search trusted news, topics, or publishers"
-                className="h-9 border-border/80 bg-card/75 pl-11"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </div>
-          </form>
-        ) : (
-          <div className="hidden flex-1 md:block" />
-        )}
+        <form
+          className="hidden max-w-xl flex-1 items-center md:flex"
+          onSubmit={submitSearch}
+        >
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/55" />
+            <Input
+              placeholder="Search news, topics, publishers…"
+              className="h-9 rounded-full border-border/70 bg-card/92 pl-11 text-sm placeholder:text-muted-foreground/55 transition duration-300 focus-visible:bg-card focus-visible:ring-primary/40"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+        </form>
 
-        <div className="flex items-center gap-1 sm:gap-2">
-          {isLoggedIn ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              type="button"
-              aria-label="Search"
-              className="md:hidden"
-              ref={mobileSearchToggleRef}
-              onClick={() => setShowMobileSearch((prev) => !prev)}
-            >
-              <Search className="h-[18px] w-[18px]" />
-            </Button>
-          ) : null}
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            type="button"
+            aria-label="Search"
+            className="md:hidden"
+            ref={mobileSearchToggleRef}
+            onClick={() => setShowMobileSearch((prev) => !prev)}
+          >
+            <Search className="h-[18px] w-[18px]" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
             type="button"
             aria-label="Toggle theme"
             onClick={toggleTheme}
+            className="rounded-full border border-transparent transition duration-300 hover:border-border/70 hover:bg-muted/70"
           >
             {theme === "dark" ? (
-              <Sun className="h-[20px] w-[20px]" />
+              <Sun className="h-[18px] w-[18px]" />
             ) : (
-              <Moon className="h-[20px] w-[20px]" />
+              <Moon className="h-[18px] w-[18px]" />
             )}
           </Button>
           <Button
@@ -332,52 +328,51 @@ const Navbar = () => {
             size="icon"
             type="button"
             aria-label="Bookmarks"
-            className="hidden sm:inline-flex"
+            className={`hidden rounded-full transition duration-300 sm:inline-flex ${location.pathname === "/bookmarks" ? "bg-muted text-primary" : "hover:bg-muted/70"}`}
             onClick={() => navigate(isLoggedIn ? "/bookmarks" : "/auth")}
             disabled={!isAuthResolved}
           >
-            <Bookmark className="h-[20px] w-[20px]" />
+            <Bookmark className="h-[18px] w-[18px]" />
           </Button>
           {isLoggedIn ? (
-            <Button
-              variant="ghost"
-              size="icon"
+            <button
               type="button"
               aria-label="Profile"
               onClick={() => navigate("/profile")}
-              className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 sm:h-6 sm:w-6"
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold uppercase tracking-wider text-white shadow-[0_10px_18px_-12px_hsl(var(--primary)/0.9)] transition duration-300 active:scale-95 ${location.pathname === "/profile" ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""} bg-gradient-to-br from-primary to-[#ff6a4d]`}
             >
-              <span className="text-sm font-black">{userInitial}</span>
-            </Button>
+              {userInitial}
+            </button>
           ) : null}
           {!isLoggedIn && isAuthResolved ? (
             <Button
-              variant="outline"
               size="sm"
               type="button"
               onClick={() => navigate("/auth")}
+              className="rounded-full px-4 text-xs font-semibold"
             >
               Sign in
             </Button>
           ) : null}
           {!isLoggedIn && !isAuthResolved ? (
-            <div className="h-8 w-16 animate-pulse rounded-md border border-border/70 bg-card/60" />
+            <div className="h-8 w-16 animate-pulse rounded-full border border-border/70 bg-card/60" />
           ) : null}
         </div>
       </div>
-      {isLoggedIn && showMobileSearch ? (
+      {showMobileSearch ? (
         <form
           className="container pb-2.5 md:hidden"
           onSubmit={submitSearch}
           ref={mobileSearchFormRef}
         >
           <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/55" />
             <Input
-              placeholder="Search trusted news, topics, or publishers"
-              className="h-9 border-border/80 bg-card/75 pl-11"
+              placeholder="Search news, topics, publishers…"
+              className="h-10 rounded-full border-border/70 bg-card/92 pl-11 text-sm transition duration-300 focus-visible:bg-card"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              autoFocus
             />
           </div>
         </form>

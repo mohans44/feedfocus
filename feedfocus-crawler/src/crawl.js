@@ -9,7 +9,7 @@ import { JSDOM } from "jsdom";
 import { Readability } from "@mozilla/readability";
 import { Article } from "./models/Article.js";
 import { asyncPool } from "./utils/asyncPool.js";
-import { inferTopicsFromText } from "./utils/topics.js";
+import { inferTopicsFromArticle } from "./utils/topics.js";
 
 dotenv.config();
 
@@ -24,27 +24,65 @@ const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 const FETCH_TIMEOUT_MS = Number(process.env.CRAWLER_FETCH_TIMEOUT_MS || 12000);
 const FETCH_RETRIES = Number(process.env.CRAWLER_FETCH_RETRIES || 3);
-const PUBLISHER_CONCURRENCY = Number(process.env.CRAWLER_PUBLISHER_CONCURRENCY || 10);
-const FEED_DISCOVERY_CONCURRENCY = Number(process.env.CRAWLER_FEED_DISCOVERY_CONCURRENCY || 8);
+const PUBLISHER_CONCURRENCY = Number(
+  process.env.CRAWLER_PUBLISHER_CONCURRENCY || 10,
+);
+const FEED_DISCOVERY_CONCURRENCY = Number(
+  process.env.CRAWLER_FEED_DISCOVERY_CONCURRENCY || 8,
+);
 const PUBLISHER_URL_LIMIT = Number(process.env.CRAWLER_URL_LIMIT || 350);
 const FEED_ITEM_LIMIT = Number(process.env.CRAWLER_FEED_ITEM_LIMIT || 140);
 const MAX_SITEMAP_URLS = Number(process.env.CRAWLER_MAX_SITEMAP_URLS || 1200);
-const MAX_ARTICLE_AGE_HOURS = Number(process.env.CRAWLER_MAX_ARTICLE_AGE_HOURS || 72);
-const MAX_FUTURE_SKEW_MINUTES = Number(process.env.CRAWLER_MAX_FUTURE_SKEW_MINUTES || 120);
+const MAX_ARTICLE_AGE_HOURS = Number(
+  process.env.CRAWLER_MAX_ARTICLE_AGE_HOURS || 72,
+);
+const MAX_FUTURE_SKEW_MINUTES = Number(
+  process.env.CRAWLER_MAX_FUTURE_SKEW_MINUTES || 120,
+);
 const MAX_RUN_MINUTES = Number(process.env.CRAWLER_MAX_RUN_MINUTES || 165);
-const MAX_PUBLISHER_MINUTES = Number(process.env.CRAWLER_MAX_PUBLISHER_MINUTES || 20);
-const ENABLE_SITEMAP_DISCOVERY = process.env.CRAWLER_ENABLE_SITEMAP_DISCOVERY !== "false";
-const MIN_RSS_CANDIDATES_FOR_SITEMAP = Number(process.env.CRAWLER_MIN_RSS_CANDIDATES_FOR_SITEMAP || 80);
-const ENABLE_HOMEPAGE_DISCOVERY = process.env.CRAWLER_ENABLE_HOMEPAGE_DISCOVERY === "true";
+const MAX_PUBLISHER_MINUTES = Number(
+  process.env.CRAWLER_MAX_PUBLISHER_MINUTES || 20,
+);
+const ENABLE_SITEMAP_DISCOVERY =
+  process.env.CRAWLER_ENABLE_SITEMAP_DISCOVERY !== "false";
+const MIN_RSS_CANDIDATES_FOR_SITEMAP = Number(
+  process.env.CRAWLER_MIN_RSS_CANDIDATES_FOR_SITEMAP || 80,
+);
+const ENABLE_HOMEPAGE_DISCOVERY =
+  process.env.CRAWLER_ENABLE_HOMEPAGE_DISCOVERY === "true";
 const ALLOWED_LANGUAGES = (process.env.CRAWLER_ALLOWED_LANGUAGES || "en")
   .split(",")
   .map((item) => item.trim().toLowerCase())
   .filter(Boolean);
-const MONGO_CONNECT_RETRIES = Number(process.env.CRAWLER_MONGO_CONNECT_RETRIES || 5);
-const MONGO_CONNECT_RETRY_DELAY_MS = Number(process.env.CRAWLER_MONGO_CONNECT_RETRY_DELAY_MS || 2500);
+const MONGO_CONNECT_RETRIES = Number(
+  process.env.CRAWLER_MONGO_CONNECT_RETRIES || 5,
+);
+const MONGO_CONNECT_RETRY_DELAY_MS = Number(
+  process.env.CRAWLER_MONGO_CONNECT_RETRY_DELAY_MS || 2500,
+);
 
-const TRACKING_QUERY_PREFIXES = ["utm_", "fbclid", "gclid", "mc_", "ref", "cmpid", "igshid", "mkt_tok"];
-const BLOCKED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".pdf", ".mp4", ".mp3", ".zip"];
+const TRACKING_QUERY_PREFIXES = [
+  "utm_",
+  "fbclid",
+  "gclid",
+  "mc_",
+  "ref",
+  "cmpid",
+  "igshid",
+  "mkt_tok",
+];
+const BLOCKED_EXTENSIONS = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+  ".svg",
+  ".pdf",
+  ".mp4",
+  ".mp3",
+  ".zip",
+];
 const BLOCKED_PATH_PARTS = [
   "/video",
   "/videos",
@@ -113,7 +151,10 @@ const withTimeout = async (promiseFactory, timeoutMs, errorMessage) => {
     return await Promise.race([
       promiseFactory(),
       new Promise((_, reject) => {
-        timeoutId = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+        timeoutId = setTimeout(
+          () => reject(new Error(errorMessage)),
+          timeoutMs,
+        );
       }),
     ]);
   } finally {
@@ -126,7 +167,8 @@ const parseDateSafe = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const hasValidDate = (value) => value instanceof Date && !Number.isNaN(value.getTime());
+const hasValidDate = (value) =>
+  value instanceof Date && !Number.isNaN(value.getTime());
 const isNotFutureDate = (date) => {
   if (!date) return true;
   return date.getTime() <= Date.now() + MAX_FUTURE_SKEW_MINUTES * 60 * 1000;
@@ -135,17 +177,21 @@ const isRecentEnough = (date) => {
   if (!date) return true;
   return Date.now() - date.getTime() <= MAX_ARTICLE_AGE_HOURS * 60 * 60 * 1000;
 };
-const isAcceptablePublishedDate = (date) => hasValidDate(date) && isNotFutureDate(date) && isRecentEnough(date);
-const normalizeTopic = (value = "") => TOPIC_ALIASES[String(value).toLowerCase().trim()] || null;
+const isAcceptablePublishedDate = (date) =>
+  hasValidDate(date) && isNotFutureDate(date) && isRecentEnough(date);
+const normalizeTopic = (value = "") =>
+  TOPIC_ALIASES[String(value).toLowerCase().trim()] || null;
 const cleanText = (value = "") => value.replace(/\s+/g, " ").trim();
-const isLiveTitle = (value = "") => BLOCKED_TITLE_PATTERNS.some((pattern) => pattern.test(cleanText(value)));
-const stripHtml = (value = "") => cleanText(cheerio.load(`<div>${String(value || "")}</div>`)("div").text());
+const isLiveTitle = (value = "") =>
+  BLOCKED_TITLE_PATTERNS.some((pattern) => pattern.test(cleanText(value)));
+const stripHtml = (value = "") =>
+  cleanText(
+    cheerio
+      .load(`<div>${String(value || "")}</div>`)("div")
+      .text(),
+  );
 const normalizeLang = (value = "") =>
-  String(value)
-    .toLowerCase()
-    .replace("_", "-")
-    .split("-")[0]
-    .trim();
+  String(value).toLowerCase().replace("_", "-").split("-")[0].trim();
 const isAllowedLanguage = (value = "") => {
   if (!value) return true;
   const normalized = normalizeLang(value);
@@ -153,7 +199,9 @@ const isAllowedLanguage = (value = "") => {
   return ALLOWED_LANGUAGES.includes(normalized);
 };
 const parseDateFromUrl = (url = "") => {
-  const match = String(url).match(/(20\d{2})[\/-](0[1-9]|1[0-2])[\/-](0[1-9]|[12]\d|3[01])/);
+  const match = String(url).match(
+    /(20\d{2})[\/-](0[1-9]|1[0-2])[\/-](0[1-9]|[12]\d|3[01])/,
+  );
   if (!match) return null;
   const date = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00Z`);
   return Number.isNaN(date.getTime()) ? null : date;
@@ -167,7 +215,9 @@ const connectWithRetry = async () => {
     } catch (error) {
       lastError = error;
       if (attempt < MONGO_CONNECT_RETRIES) {
-        console.warn(`[db] connect attempt ${attempt}/${MONGO_CONNECT_RETRIES} failed: ${error.message}`);
+        console.warn(
+          `[db] connect attempt ${attempt}/${MONGO_CONNECT_RETRIES} failed: ${error.message}`,
+        );
         await wait(MONGO_CONNECT_RETRY_DELAY_MS * attempt);
       }
     }
@@ -181,9 +231,11 @@ const canonicalizeUrl = (rawUrl) => {
     url.hash = "";
     for (const key of Array.from(url.searchParams.keys())) {
       const lower = key.toLowerCase();
-      if (TRACKING_QUERY_PREFIXES.some((prefix) => lower.startsWith(prefix))) url.searchParams.delete(key);
+      if (TRACKING_QUERY_PREFIXES.some((prefix) => lower.startsWith(prefix)))
+        url.searchParams.delete(key);
     }
-    if (url.pathname && url.pathname !== "/" && url.pathname.endsWith("/")) url.pathname = url.pathname.slice(0, -1);
+    if (url.pathname && url.pathname !== "/" && url.pathname.endsWith("/"))
+      url.pathname = url.pathname.slice(0, -1);
     return url.toString();
   } catch {
     return null;
@@ -218,11 +270,15 @@ const isLikelyArticleUrl = (url, publisher) => {
     const parsed = new URL(url);
     const lowerPath = parsed.pathname.toLowerCase();
     if (BLOCKED_EXTENSIONS.some((ext) => lowerPath.endsWith(ext))) return false;
-    if (BLOCKED_PATH_PARTS.some((part) => lowerPath.includes(part))) return false;
-    if (publisher.blockedPaths?.some((part) => lowerPath.includes(part))) return false;
-    if (publisher.allowedPaths?.length) return publisher.allowedPaths.some((part) => lowerPath.includes(part));
+    if (BLOCKED_PATH_PARTS.some((part) => lowerPath.includes(part)))
+      return false;
+    if (publisher.blockedPaths?.some((part) => lowerPath.includes(part)))
+      return false;
+    if (publisher.allowedPaths?.length)
+      return publisher.allowedPaths.some((part) => lowerPath.includes(part));
 
-    const looksDated = /\/20\d{2}\//.test(lowerPath) || /-\d{4,}/.test(lowerPath);
+    const looksDated =
+      /\/20\d{2}\//.test(lowerPath) || /-\d{4,}/.test(lowerPath);
     const hasHint = ARTICLE_PATH_HINTS.some((hint) => lowerPath.includes(hint));
     const segmentCount = lowerPath.split("/").filter(Boolean).length;
     if (segmentCount < 2) return false;
@@ -249,12 +305,22 @@ const fetchWithRetry = async (url, { accept = "*/*" } = {}) => {
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       if (!res.ok) {
-        const retryable = res.status === 429 || (res.status >= 500 && res.status <= 599);
-        throw new Error(`${retryable ? "Retryable" : "Fetch"} status ${res.status} for ${url}`);
+        const retryable =
+          res.status === 429 || (res.status >= 500 && res.status <= 599);
+        throw new Error(
+          `${retryable ? "Retryable" : "Fetch"} status ${res.status} for ${url}`,
+        );
       }
-      const encoding = String(res.headers.get("content-encoding") || "").toLowerCase();
-      const contentType = String(res.headers.get("content-type") || "").toLowerCase();
-      const isGzip = encoding.includes("gzip") || url.endsWith(".gz") || contentType.includes("application/x-gzip");
+      const encoding = String(
+        res.headers.get("content-encoding") || "",
+      ).toLowerCase();
+      const contentType = String(
+        res.headers.get("content-type") || "",
+      ).toLowerCase();
+      const isGzip =
+        encoding.includes("gzip") ||
+        url.endsWith(".gz") ||
+        contentType.includes("application/x-gzip");
 
       if (isGzip) {
         const buf = Buffer.from(await res.arrayBuffer());
@@ -269,7 +335,8 @@ const fetchWithRetry = async (url, { accept = "*/*" } = {}) => {
     } catch (error) {
       lastError = error;
       if (attempt < FETCH_RETRIES) {
-        const backoff = 300 * 2 ** (attempt - 1) + Math.floor(Math.random() * 200);
+        const backoff =
+          300 * 2 ** (attempt - 1) + Math.floor(Math.random() * 200);
         await wait(backoff);
       }
     }
@@ -279,7 +346,11 @@ const fetchWithRetry = async (url, { accept = "*/*" } = {}) => {
 
 const extractMetaContent = ($, selectors) => {
   for (const selector of selectors) {
-    const value = ($(selector).attr("content") || $(selector).attr("datetime") || "").trim();
+    const value = (
+      $(selector).attr("content") ||
+      $(selector).attr("datetime") ||
+      ""
+    ).trim();
     if (value) return value;
   }
   return null;
@@ -318,11 +389,15 @@ const discoverSitemapCandidates = async (publisher) => {
     const normalized = normalizeUrl(publisher.homepage, sitemapUrl);
     if (normalized) seeds.add(normalized);
   }
-  (await discoverRobotsSitemaps(publisher.homepage)).forEach((item) => seeds.add(item));
-  ["/sitemap.xml", "/sitemap_index.xml", "/news-sitemap.xml"].forEach((pathPart) => {
-    const url = normalizeUrl(publisher.homepage, pathPart);
-    if (url) seeds.add(url);
-  });
+  (await discoverRobotsSitemaps(publisher.homepage)).forEach((item) =>
+    seeds.add(item),
+  );
+  ["/sitemap.xml", "/sitemap_index.xml", "/news-sitemap.xml"].forEach(
+    (pathPart) => {
+      const url = normalizeUrl(publisher.homepage, pathPart);
+      if (url) seeds.add(url);
+    },
+  );
 
   const discoveredUrls = new Set();
   const seen = new Set();
@@ -332,7 +407,9 @@ const discoverSitemapCandidates = async (publisher) => {
     if (!sitemapUrl || seen.has(sitemapUrl)) continue;
     seen.add(sitemapUrl);
     try {
-      const xml = await fetchWithRetry(sitemapUrl, { accept: "application/xml,text/xml,*/*" });
+      const xml = await fetchWithRetry(sitemapUrl, {
+        accept: "application/xml,text/xml,*/*",
+      });
       const { urls, sitemaps } = parseXmlUrls(xml);
       urls.forEach((candidate) => {
         const normalized = canonicalizeUrl(candidate);
@@ -358,7 +435,9 @@ const discoverSitemapCandidates = async (publisher) => {
 
 const findRssLinksFromHomepage = (html, homepage) => {
   const $ = cheerio.load(html);
-  return $("link[rel='alternate'][type*='rss'], link[rel='alternate'][type*='atom']")
+  return $(
+    "link[rel='alternate'][type*='rss'], link[rel='alternate'][type*='atom']",
+  )
     .map((_, el) => normalizeUrl(homepage, $(el).attr("href")))
     .get()
     .filter(Boolean);
@@ -388,16 +467,19 @@ const parseRssItems = (xml, baseUrl, { topicHint = null } = {}) => {
       cleanText($item.find("language").first().text()) ||
       feedLanguage;
     if (!isAllowedLanguage(itemLanguage)) return;
-    const link = $item.find("link").first().text().trim() || $item.find("guid").first().text().trim();
+    const link =
+      $item.find("link").first().text().trim() ||
+      $item.find("guid").first().text().trim();
     const url = normalizeUrl(baseUrl, link);
     if (!url) return;
     const publishedAt =
-      parseDateSafe($item.find("pubDate").first().text().trim()) || parseDateSafe($item.find("dc\\:date").first().text().trim());
+      parseDateSafe($item.find("pubDate").first().text().trim()) ||
+      parseDateSafe($item.find("dc\\:date").first().text().trim());
     if (publishedAt && !isAcceptablePublishedDate(publishedAt)) return;
     const description = stripHtml(
       $item.find("content\\:encoded").first().text() ||
         $item.find("description").first().text() ||
-        $item.find("summary").first().text()
+        $item.find("summary").first().text(),
     );
     const imageUrl =
       $item.find("media\\:content").first().attr("url") ||
@@ -411,7 +493,8 @@ const parseRssItems = (xml, baseUrl, { topicHint = null } = {}) => {
       sourceHint: "rss",
       topicHint: normalizeTopic(topicHint) || extractRssCategory($item) || null,
       summaryHint: description ? description.slice(0, 320) : null,
-      contentHint: description && description.length >= 120 ? description : null,
+      contentHint:
+        description && description.length >= 120 ? description : null,
       imageHint: imageUrl || null,
       languageHint: itemLanguage ? normalizeLang(itemLanguage) : null,
     });
@@ -431,12 +514,13 @@ const parseRssItems = (xml, baseUrl, { topicHint = null } = {}) => {
     const url = normalizeUrl(baseUrl, link);
     if (!url) return;
     const publishedAt =
-      parseDateSafe($entry.find("published").first().text().trim()) || parseDateSafe($entry.find("updated").first().text().trim());
+      parseDateSafe($entry.find("published").first().text().trim()) ||
+      parseDateSafe($entry.find("updated").first().text().trim());
     if (publishedAt && !isAcceptablePublishedDate(publishedAt)) return;
     const description = stripHtml(
       $entry.find("content").first().text() ||
         $entry.find("summary").first().text() ||
-        $entry.find("content\\:encoded").first().text()
+        $entry.find("content\\:encoded").first().text(),
     );
     const imageUrl =
       $entry.find("media\\:content").first().attr("url") ||
@@ -449,7 +533,8 @@ const parseRssItems = (xml, baseUrl, { topicHint = null } = {}) => {
       sourceHint: "rss",
       topicHint: normalizeTopic(topicHint) || null,
       summaryHint: description ? description.slice(0, 320) : null,
-      contentHint: description && description.length >= 120 ? description : null,
+      contentHint:
+        description && description.length >= 120 ? description : null,
       imageHint: imageUrl || null,
       languageHint: itemLanguage ? normalizeLang(itemLanguage) : null,
     });
@@ -461,7 +546,8 @@ const parseRssItems = (xml, baseUrl, { topicHint = null } = {}) => {
 const toFeedConfig = (entry) => {
   if (!entry) return null;
   if (typeof entry === "string") return { url: entry, topic: null };
-  if (typeof entry === "object" && entry.url) return { url: entry.url, topic: entry.topic || null };
+  if (typeof entry === "object" && entry.url)
+    return { url: entry.url, topic: entry.topic || null };
   return null;
 };
 
@@ -476,7 +562,9 @@ const discoverRssCandidates = async (publisher, homepageHtml) => {
     if (parsed) feedConfigs.push(parsed);
   }
   if (!feedConfigs.length && homepageHtml) {
-    findRssLinksFromHomepage(homepageHtml, publisher.homepage).forEach((url) => feedConfigs.push({ url, topic: null }));
+    findRssLinksFromHomepage(homepageHtml, publisher.homepage).forEach((url) =>
+      feedConfigs.push({ url, topic: null }),
+    );
     ["/rss", "/rss.xml", "/feed", "/feeds/news.xml"].forEach((pathPart) => {
       const url = normalizeUrl(publisher.homepage, pathPart);
       if (url) feedConfigs.push({ url, topic: null });
@@ -487,7 +575,8 @@ const discoverRssCandidates = async (publisher, homepageHtml) => {
   for (const config of feedConfigs) {
     const normalized = normalizeUrl(publisher.homepage, config.url);
     if (!normalized) continue;
-    if (!deduped.has(normalized)) deduped.set(normalized, { url: normalized, topic: config.topic || null });
+    if (!deduped.has(normalized))
+      deduped.set(normalized, { url: normalized, topic: config.topic || null });
   }
 
   const candidates = [];
@@ -500,16 +589,20 @@ const discoverRssCandidates = async (publisher, homepageHtml) => {
         const xml = await fetchWithRetry(feedConfig.url, {
           accept: "application/rss+xml,application/atom+xml,text/xml,*/*",
         });
-        const items = parseRssItems(xml, publisher.homepage, { topicHint: feedConfig.topic });
+        const items = parseRssItems(xml, publisher.homepage, {
+          topicHint: feedConfig.topic,
+        });
         candidates.push(...items.slice(0, FEED_ITEM_LIMIT));
       } catch {
         feedErrors.push(feedConfig.url);
       }
-    }
+    },
   );
 
   if (feedErrors.length) {
-    console.warn(`[${publisher.name}] feed errors=${feedErrors.length} sample=${feedErrors.slice(0, 2).join(", ")}`);
+    console.warn(
+      `[${publisher.name}] feed errors=${feedErrors.length} sample=${feedErrors.slice(0, 2).join(", ")}`,
+    );
   }
 
   return candidates;
@@ -556,13 +649,17 @@ const mergeAndFilterCandidates = (publisher, candidateLists) => {
         // Sitemap URLs without any publish-time signal are mostly stale/noisy.
         continue;
       }
-      if (item.publishedAt && !isAcceptablePublishedDate(item.publishedAt)) continue;
+      if (item.publishedAt && !isAcceptablePublishedDate(item.publishedAt))
+        continue;
 
       const existing = merged.get(normalized);
       if (!existing) {
         const candidate = { ...item, url: normalized };
         const titleKey = cleanText(candidate.titleHint || "").toLowerCase();
-        const ts = candidate.publishedAt?.getTime() || parseDateFromUrl(normalized)?.getTime() || 0;
+        const ts =
+          candidate.publishedAt?.getTime() ||
+          parseDateFromUrl(normalized)?.getTime() ||
+          0;
         if (titleKey && ts) {
           const dedupeKey = `${publisher.name}|${titleKey}|${Math.floor(ts / (10 * 60 * 1000))}`;
           if (seenByTitle.has(dedupeKey)) continue;
@@ -572,17 +669,23 @@ const mergeAndFilterCandidates = (publisher, candidateLists) => {
         continue;
       }
 
-      if (!existing.titleHint && item.titleHint) existing.titleHint = item.titleHint;
-      if (!existing.topicHint && item.topicHint) existing.topicHint = item.topicHint;
+      if (!existing.titleHint && item.titleHint)
+        existing.titleHint = item.titleHint;
+      if (!existing.topicHint && item.topicHint)
+        existing.topicHint = item.topicHint;
       const existingDate = existing.publishedAt?.getTime() ?? 0;
       const nextDate = item.publishedAt?.getTime() ?? 0;
       if (nextDate > existingDate) existing.publishedAt = item.publishedAt;
-      if (existing.sourceHint !== "rss" && item.sourceHint === "rss") existing.sourceHint = "rss";
+      if (existing.sourceHint !== "rss" && item.sourceHint === "rss")
+        existing.sourceHint = "rss";
     }
   }
 
   return Array.from(merged.values())
-    .sort((a, b) => (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0))
+    .sort(
+      (a, b) =>
+        (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0),
+    )
     .slice(0, PUBLISHER_URL_LIMIT);
 };
 
@@ -593,11 +696,19 @@ const extractJsonLdArticleData = ($) => {
   for (const raw of scripts) {
     try {
       const parsed = JSON.parse(raw);
-      const candidates = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.["@graph"]) ? parsed["@graph"] : [parsed];
+      const candidates = Array.isArray(parsed)
+        ? parsed
+        : Array.isArray(parsed?.["@graph"])
+          ? parsed["@graph"]
+          : [parsed];
       for (const item of candidates) {
-        const type = Array.isArray(item?.["@type"]) ? item["@type"].join(",") : item?.["@type"];
+        const type = Array.isArray(item?.["@type"])
+          ? item["@type"].join(",")
+          : item?.["@type"];
         if (!type || !/newsarticle|article/i.test(type)) continue;
-        const image = Array.isArray(item.image) ? item.image[0]?.url || item.image[0] : item.image?.url || item.image;
+        const image = Array.isArray(item.image)
+          ? item.image[0]?.url || item.image[0]
+          : item.image?.url || item.image;
         return {
           headline: item.headline || item.name || null,
           datePublished: item.datePublished || item.dateCreated || null,
@@ -650,7 +761,7 @@ const upsertArticleFromParts = async ({
         sourceType,
       },
     },
-    { upsert: true }
+    { upsert: true },
   );
 };
 
@@ -674,19 +785,30 @@ const extractArticle = async (candidate, publisher) => {
     const title = candidate.titleHint || null;
     if (isLiveTitle(title || "")) throw new Error("Live article skipped");
     const content = normalizeContent(stripHtml(candidate.contentHint || ""));
-    const publishedAt = candidate.publishedAt || parseDateFromUrl(candidate.url) || null;
+    const publishedAt =
+      candidate.publishedAt || parseDateFromUrl(candidate.url) || null;
     const language = normalizeLang(candidate.languageHint || "en");
 
     if (!title || !content || content.length < 120) {
       throw new Error("Insufficient content");
     }
-    if (!isAcceptablePublishedDate(publishedAt)) throw new Error("Invalid published date");
+    if (!isAcceptablePublishedDate(publishedAt))
+      throw new Error("Invalid published date");
     if (!isAllowedLanguage(language)) throw new Error("Non-English article");
 
-    const summary = normalizeContent(stripHtml(candidate.summaryHint || content.slice(0, 320)));
-    const inferredTopics = inferTopicsFromText(`${title} ${summary} ${content.slice(0, 3000)}`);
+    const summary = normalizeContent(
+      stripHtml(candidate.summaryHint || content.slice(0, 320)),
+    );
+    const inferredTopics = inferTopicsFromArticle({
+      title,
+      summary,
+      content: content.slice(0, 3000),
+      url: candidate.url,
+    });
     const hintedTopic = normalizeTopic(candidate.topicHint || "");
-    const topics = Array.from(new Set([hintedTopic, ...inferredTopics].filter(Boolean))).slice(0, 3);
+    const topics = Array.from(
+      new Set([hintedTopic, ...inferredTopics].filter(Boolean)),
+    ).slice(0, 3);
 
     await upsertArticleFromParts({
       url: candidate.url,
@@ -703,7 +825,9 @@ const extractArticle = async (candidate, publisher) => {
   };
 
   try {
-    const html = await fetchWithRetry(candidate.url, { accept: "text/html,application/xhtml+xml,*/*" });
+    const html = await fetchWithRetry(candidate.url, {
+      accept: "text/html,application/xhtml+xml,*/*",
+    });
     const sanitizedHtml = sanitizeHtmlForReadability(html);
     const dom = new JSDOM(sanitizedHtml, { url: candidate.url });
     const reader = new Readability(dom.window.document);
@@ -712,7 +836,10 @@ const extractArticle = async (candidate, publisher) => {
     const jsonLd = extractJsonLdArticleData($);
 
     const title =
-      extractMetaContent($, ["meta[property='og:title']", "meta[name='twitter:title']"]) ||
+      extractMetaContent($, [
+        "meta[property='og:title']",
+        "meta[name='twitter:title']",
+      ]) ||
       jsonLd?.headline ||
       cleanText(readable?.title || "") ||
       cleanText($("h1").first().text()) ||
@@ -729,17 +856,22 @@ const extractArticle = async (candidate, publisher) => {
           "meta[name='date']",
           "meta[itemprop='datePublished']",
           "time[datetime]",
-        ])
+        ]),
       ) ||
       parseDateSafe(jsonLd?.datePublished) ||
       candidate.publishedAt ||
       parseDateFromUrl(candidate.url) ||
       null;
 
-    if (!isAcceptablePublishedDate(publishedAt)) throw new Error("Invalid published date");
+    if (!isAcceptablePublishedDate(publishedAt))
+      throw new Error("Invalid published date");
 
     const imageUrl =
-      extractMetaContent($, ["meta[property='og:image']", "meta[name='twitter:image']", "meta[itemprop='image']"]) ||
+      extractMetaContent($, [
+        "meta[property='og:image']",
+        "meta[name='twitter:image']",
+        "meta[itemprop='image']",
+      ]) ||
       jsonLd?.image ||
       candidate.imageHint ||
       null;
@@ -747,22 +879,34 @@ const extractArticle = async (candidate, publisher) => {
     const language =
       normalizeLang(
         $("html").attr("lang") ||
-          extractMetaContent($, ["meta[property='og:locale']", "meta[name='language']"]) ||
+          extractMetaContent($, [
+            "meta[property='og:locale']",
+            "meta[name='language']",
+          ]) ||
           candidate.languageHint ||
-          "en"
+          "en",
       ) || "en";
     if (!isAllowedLanguage(language)) throw new Error("Non-English article");
 
-    const readabilityText = normalizeContent(cleanText(readable?.textContent || ""));
+    const readabilityText = normalizeContent(
+      cleanText(readable?.textContent || ""),
+    );
     const articleNodeText = cleanText(
       $("article p")
         .map((_, p) => $(p).text())
         .get()
-        .join(" ")
+        .join(" "),
     );
     const jsonLdBody = normalizeContent(cleanText(jsonLd?.articleBody || ""));
-    const fallbackContent = normalizeContent(stripHtml(candidate.contentHint || ""));
-    const content = [readabilityText, normalizeContent(articleNodeText), jsonLdBody, fallbackContent]
+    const fallbackContent = normalizeContent(
+      stripHtml(candidate.contentHint || ""),
+    );
+    const content = [
+      readabilityText,
+      normalizeContent(articleNodeText),
+      jsonLdBody,
+      fallbackContent,
+    ]
       .filter(Boolean)
       .sort((a, b) => b.length - a.length)[0];
 
@@ -771,10 +915,19 @@ const extractArticle = async (candidate, publisher) => {
       throw new Error("Insufficient content");
     }
 
-    const summary = normalizeContent(stripHtml(candidate.summaryHint || content.slice(0, 320)));
-    const inferredTopics = inferTopicsFromText(`${title} ${summary} ${content.slice(0, 3000)}`);
+    const summary = normalizeContent(
+      stripHtml(candidate.summaryHint || content.slice(0, 320)),
+    );
+    const inferredTopics = inferTopicsFromArticle({
+      title,
+      summary,
+      content: content.slice(0, 3000),
+      url: candidate.url,
+    });
     const hintedTopic = normalizeTopic(candidate.topicHint || "");
-    const topics = Array.from(new Set([hintedTopic, ...inferredTopics].filter(Boolean))).slice(0, 3);
+    const topics = Array.from(
+      new Set([hintedTopic, ...inferredTopics].filter(Boolean)),
+    ).slice(0, 3);
 
     await upsertArticleFromParts({
       url: candidate.url,
@@ -800,9 +953,13 @@ const discoverPublisherCandidates = async (publisher) => {
   let homepageHtml = "";
   if (!publisher.skipHomepage) {
     try {
-      homepageHtml = await fetchWithRetry(publisher.homepage, { accept: "text/html,application/xhtml+xml,*/*" });
+      homepageHtml = await fetchWithRetry(publisher.homepage, {
+        accept: "text/html,application/xhtml+xml,*/*",
+      });
     } catch (error) {
-      console.warn(`[${publisher.name}] homepage unavailable, continuing with feeds/sitemaps: ${error.message}`);
+      console.warn(
+        `[${publisher.name}] homepage unavailable, continuing with feeds/sitemaps: ${error.message}`,
+      );
     }
   }
 
@@ -811,21 +968,30 @@ const discoverPublisherCandidates = async (publisher) => {
   const shouldDiscoverSitemaps =
     ENABLE_SITEMAP_DISCOVERY &&
     publisher.disableSitemaps !== true &&
-    (publisher.forceSitemaps === true || rssCandidates.length < MIN_RSS_CANDIDATES_FOR_SITEMAP);
+    (publisher.forceSitemaps === true ||
+      rssCandidates.length < MIN_RSS_CANDIDATES_FOR_SITEMAP);
   if (shouldDiscoverSitemaps) {
     sitemapCandidates = await discoverSitemapCandidates(publisher);
   } else if (ENABLE_SITEMAP_DISCOVERY) {
     if (publisher.disableSitemaps === true) {
-      console.log(`[${publisher.name}] skipping sitemap discovery (publisher.disableSitemaps=true)`);
+      console.log(
+        `[${publisher.name}] skipping sitemap discovery (publisher.disableSitemaps=true)`,
+      );
     } else {
       console.log(
-        `[${publisher.name}] skipping sitemap discovery (rssCandidates=${rssCandidates.length}, threshold=${MIN_RSS_CANDIDATES_FOR_SITEMAP})`
+        `[${publisher.name}] skipping sitemap discovery (rssCandidates=${rssCandidates.length}, threshold=${MIN_RSS_CANDIDATES_FOR_SITEMAP})`,
       );
     }
   }
   const homepageCandidates =
-    ENABLE_HOMEPAGE_DISCOVERY && homepageHtml ? discoverHomepageCandidates(homepageHtml, publisher) : [];
-  return mergeAndFilterCandidates(publisher, [rssCandidates, sitemapCandidates, homepageCandidates]);
+    ENABLE_HOMEPAGE_DISCOVERY && homepageHtml
+      ? discoverHomepageCandidates(homepageHtml, publisher)
+      : [];
+  return mergeAndFilterCandidates(publisher, [
+    rssCandidates,
+    sitemapCandidates,
+    homepageCandidates,
+  ]);
 };
 
 const run = async () => {
@@ -834,7 +1000,7 @@ const run = async () => {
   const runStartedAt = Date.now();
   await connectWithRetry();
   console.log(
-    `Crawler started. publishers=${publishers.length} urlLimit=${PUBLISHER_URL_LIMIT} concurrency=${PUBLISHER_CONCURRENCY}`
+    `Crawler started. publishers=${publishers.length} urlLimit=${PUBLISHER_URL_LIMIT} concurrency=${PUBLISHER_CONCURRENCY}`,
   );
 
   let totalSuccess = 0;
@@ -844,18 +1010,21 @@ const run = async () => {
     const elapsedMs = Date.now() - runStartedAt;
     if (elapsedMs >= MAX_RUN_MINUTES * 60 * 1000) {
       console.warn(
-        `Stopping early due to max runtime (${MAX_RUN_MINUTES}m). Processed part of publisher list safely.`
+        `Stopping early due to max runtime (${MAX_RUN_MINUTES}m). Processed part of publisher list safely.`,
       );
       break;
     }
     const startedAt = Date.now();
     const publisherDeadlineMs = startedAt + MAX_PUBLISHER_MINUTES * 60 * 1000;
     try {
-      const discoveryBudgetMs = Math.max(5000, publisherDeadlineMs - Date.now());
+      const discoveryBudgetMs = Math.max(
+        5000,
+        publisherDeadlineMs - Date.now(),
+      );
       const candidates = await withTimeout(
         () => discoverPublisherCandidates(publisher),
         discoveryBudgetMs,
-        `Candidate discovery timed out after ${(discoveryBudgetMs / 1000).toFixed(1)}s`
+        `Candidate discovery timed out after ${(discoveryBudgetMs / 1000).toFixed(1)}s`,
       );
       let success = 0;
       let failed = 0;
@@ -884,7 +1053,7 @@ const run = async () => {
         .map(([reason, count]) => `${reason}:${count}`)
         .join(" | ");
       console.log(
-        `[${publisher.name}] candidates=${candidates.length} success=${success} failed=${failed} skipped=${skipped} duration=${elapsed}s${topFailures ? ` failures=${topFailures}` : ""}`
+        `[${publisher.name}] candidates=${candidates.length} success=${success} failed=${failed} skipped=${skipped} duration=${elapsed}s${topFailures ? ` failures=${topFailures}` : ""}`,
       );
     } catch (error) {
       console.error(`[${publisher.name}] failed: ${error.message}`);
@@ -893,7 +1062,9 @@ const run = async () => {
   }
 
   await mongoose.disconnect();
-  console.log(`Crawl completed. totalSuccess=${totalSuccess} totalFailed=${totalFailed}`);
+  console.log(
+    `Crawl completed. totalSuccess=${totalSuccess} totalFailed=${totalFailed}`,
+  );
 };
 
 run().catch(async (error) => {

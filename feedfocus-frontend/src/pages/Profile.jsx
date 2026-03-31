@@ -13,20 +13,7 @@ import {
   updatePreferences,
   updateProfile,
 } from "../utils/api";
-
-const PREFERENCE_OPTIONS = [
-  "india",
-  "world",
-  "technology",
-  "business",
-  "science",
-  "health",
-  "sports",
-  "entertainment",
-  "food",
-  "fashion",
-  "travel",
-];
+import { PREFERENCE_OPTIONS } from "../constants/preferences";
 
 const Profile = () => {
   const navigate = useNavigate();

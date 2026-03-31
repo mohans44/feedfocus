@@ -24,7 +24,6 @@ import {
   UtensilsCrossed,
   X,
 } from "lucide-react";
-import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import ArticleCard from "../components/ArticleCard";
 import {
@@ -136,53 +135,110 @@ const isLocalStateMatch = (article = {}, stateName = "") => {
   return keywords.some((keyword) => haystack.includes(keyword));
 };
 
+const resolveArticleId = (article = {}) => {
+  const raw = article?._id;
+  if (!raw) return "";
+  if (typeof raw === "string") return raw;
+  if (typeof raw === "object") {
+    if (typeof raw.$oid === "string") return raw.$oid;
+    if (typeof raw.toString === "function") {
+      const parsed = raw.toString();
+      if (parsed && parsed !== "[object Object]") return parsed;
+    }
+  }
+  return "";
+};
+
 const BannerCard = ({
   article,
   isBookmarked,
+  bookmarkBusy = false,
+  bookmarkDisabled = false,
   onToggleBookmark,
   onShowSummary,
+  onOpenArticle,
   summaryBusy = false,
 }) => {
   const fallbackImage = getCategoryPlaceholder(
     article.primaryCategory || article.topics?.[0] || "world",
   );
   const imageUrl = article.imageUrl || fallbackImage;
-
   return (
-    <a
-      href={article.url || "#"}
-      target="_blank"
-      rel="noreferrer"
-      className="group relative block overflow-hidden rounded-[28px] border border-border/70 bg-card/90 shadow-[0_18px_36px_-28px_rgba(0,0,0,0.55)]"
-    >
-      <img
-        src={imageUrl}
-        alt=""
-        aria-hidden="true"
-        className="absolute inset-0 h-full w-full scale-110 object-cover blur-xl brightness-35"
-        onError={(event) => {
-          event.currentTarget.src = fallbackImage;
+    <article className="group relative overflow-hidden rounded-[30px] border border-border/60 bg-card/92 shadow-[0_30px_62px_-40px_rgba(0,0,0,0.66)] transition duration-500 hover:shadow-[0_40px_72px_-42px_rgba(0,0,0,0.74)]">
+      <div
+        role="button"
+        tabIndex={0}
+        className="block cursor-pointer"
+        onClick={() => onOpenArticle?.(article)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            onOpenArticle?.(article);
+          }
         }}
-      />
-      <div className="absolute inset-0 z-[0] bg-black/40" />
-      <img
-        src={imageUrl}
-        alt={article.title}
-        className="relative z-[1] h-[220px] w-full bg-black/10 object-cover sm:h-[340px] sm:object-contain lg:h-[460px]"
-        onError={(event) => {
-          event.currentTarget.src = fallbackImage;
-        }}
-      />
-      <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/95 via-black/82 to-black/68" />
+      >
+        <div className="relative h-[320px] overflow-hidden sm:h-[420px] lg:h-[540px]">
+          <img
+            src={imageUrl}
+            alt={article.title}
+            className="relative z-[1] h-full w-full bg-black/10 object-cover transition duration-700 group-hover:scale-[1.015]"
+            onError={(event) => {
+              event.currentTarget.src = fallbackImage;
+            }}
+          />
+          <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/42 to-transparent" />
+        </div>
+
+        <div className="relative z-[3] overflow-hidden border-t border-slate-200 dark:border-white/18">
+          <img
+            src={imageUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl brightness-[0.7] dark:block"
+            onError={(event) => {
+              event.currentTarget.src = fallbackImage;
+            }}
+          />
+          <div className="absolute inset-0 bg-white dark:bg-slate-900" />
+          <div className="relative flex h-[132px] flex-col justify-between p-4 sm:h-[144px] sm:p-5">
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500 dark:text-white/92 sm:text-xs">
+                {article.publisher || "Source"}
+              </p>
+              <h3 className="line-clamp-2 text-base font-semibold leading-tight tracking-[-0.012em] text-slate-900 dark:text-white sm:text-xl lg:text-[1.6rem]">
+                {article.title}
+              </h3>
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-700 dark:border-white/30 dark:bg-white/18 dark:text-white">
+                Read full story
+              </span>
+              {article.url ? (
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline dark:text-white/92 dark:hover:text-white"
+                >
+                  Source
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
       <button
         type="button"
         aria-label={isBookmarked ? "Remove bookmark" : "Add bookmark"}
-        className="absolute right-3 top-3 z-[4] rounded-full border border-white/25 bg-black/64 p-2 text-white backdrop-blur-md transition hover:bg-black/78"
+        className="absolute right-3 top-3 z-[4] rounded-full border border-white/30 bg-black/45 p-2 text-white backdrop-blur-xl transition duration-300 hover:scale-105 hover:bg-black/62 disabled:opacity-60"
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
           onToggleBookmark?.(article);
         }}
+        disabled={bookmarkBusy || bookmarkDisabled}
       >
         {isBookmarked ? (
           <BookmarkCheck className="h-4 w-4" />
@@ -193,7 +249,7 @@ const BannerCard = ({
       <button
         type="button"
         aria-label="Show AI summary"
-        className="absolute bottom-3 right-3 z-[4] rounded-full border border-primary/70 bg-primary p-2 text-primary-foreground shadow-[0_10px_20px_-16px_hsl(var(--primary))] backdrop-blur-md transition hover:bg-primary/90 disabled:opacity-60"
+        className="absolute bottom-4 right-4 z-[4] rounded-full border border-primary/65 bg-primary p-2 text-primary-foreground shadow-[0_12px_24px_-16px_hsl(var(--primary))] backdrop-blur-md transition duration-300 hover:scale-105 hover:bg-primary/90 disabled:opacity-60"
         disabled={summaryBusy}
         onClick={(event) => {
           event.preventDefault();
@@ -203,15 +259,7 @@ const BannerCard = ({
       >
         <Sparkles className="h-4 w-4" />
       </button>
-      <div className="absolute bottom-0 left-0 right-0 z-[3] border-t border-white/10 bg-black/84 p-2.5 backdrop-blur-xl sm:p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/75 sm:text-xs">
-          {article.publisher || "Source"}
-        </p>
-        <h3 className="line-clamp-2 text-sm font-semibold text-white sm:text-lg lg:text-xl">
-          {article.title}
-        </h3>
-      </div>
-    </a>
+    </article>
   );
 };
 
@@ -225,6 +273,7 @@ const Home = () => {
   const [bookmarkBusyId, setBookmarkBusyId] = useState(null);
   const [carouselTrackIndex, setCarouselTrackIndex] = useState(1);
   const [carouselAnimating, setCarouselAnimating] = useState(true);
+  const [carouselHoverPaused, setCarouselHoverPaused] = useState(false);
   const [aiLoadingId, setAiLoadingId] = useState(null);
   const [aiSummaryById, setAiSummaryById] = useState({});
   const [activeSummaryArticle, setActiveSummaryArticle] = useState(null);
@@ -233,8 +282,6 @@ const Home = () => {
   const [mobileImagePreview, setMobileImagePreview] = useState(null);
   const [mobileCardIndex, setMobileCardIndex] = useState(0);
   const [categorySwitching, setCategorySwitching] = useState(false);
-  const [carouselBookmarkSet, setCarouselBookmarkSet] = useState(new Set());
-
   const [extraItems, setExtraItems] = useState([]);
   const [paginationCursor, setPaginationCursor] = useState(null);
   const [hasMore, setHasMore] = useState(true);
@@ -251,6 +298,7 @@ const Home = () => {
   const mobileSwipeDoneRef = useRef(false);
   const touchStartXRef = useRef(null);
   const touchDeltaXRef = useRef(0);
+  const touchStartTimeRef = useRef(0);
 
   const { data: meData } = useQuery({
     queryKey: ["me"],
@@ -328,6 +376,15 @@ const Home = () => {
       carouselStories[0],
     ];
   }, [carouselStories]);
+  const activeCarouselIndex = useMemo(() => {
+    if (!carouselStories.length) return 0;
+    if (carouselStories.length === 1) return 0;
+    const normalized =
+      (((carouselTrackIndex - 1) % carouselStories.length) +
+        carouselStories.length) %
+      carouselStories.length;
+    return normalized;
+  }, [carouselTrackIndex, carouselStories.length]);
   const textStories = useMemo(() => {
     const items = stories.slice(carouselStories.length);
     if (meData?.user) return items;
@@ -339,6 +396,10 @@ const Home = () => {
   }, [stories, meData?.user]);
   const showInitialLoading =
     categorySwitching || (isCategoryLoading && !stories.length);
+  const isCarouselAutoplayPaused =
+    carouselHoverPaused ||
+    Boolean(activeSummaryArticle?._id) ||
+    Boolean(mobileSummaryOpenId);
 
   useEffect(() => {
     setCategorySwitching(true);
@@ -351,7 +412,6 @@ const Home = () => {
     setMobileSummaryTransition(null);
     setMobileImagePreview(null);
     setMobileCardIndex(0);
-    setCarouselBookmarkSet(new Set());
     setExtraItems([]);
     setPaginationCursor(null);
     setHasMore(true);
@@ -389,13 +449,8 @@ const Home = () => {
 
   useEffect(() => {
     if (isActiveForYou) {
-      const fallbackCursor = baseStories.length
-        ? new Date(
-            baseStories[baseStories.length - 1].publishedAt,
-          ).toISOString()
-        : null;
-      setPaginationCursor(fallbackCursor);
-      setHasMore(Boolean(fallbackCursor));
+      setPaginationCursor(null);
+      setHasMore(false);
       return;
     }
     setPaginationCursor(topData?.nextCursor || null);
@@ -404,11 +459,12 @@ const Home = () => {
 
   useEffect(() => {
     if (carouselStories.length <= 1) return undefined;
+    if (isCarouselAutoplayPaused) return undefined;
     const timer = setInterval(() => {
       setCarouselTrackIndex((prev) => prev + 1);
     }, 10000);
     return () => clearInterval(timer);
-  }, [carouselStories.length]);
+  }, [carouselStories.length, isCarouselAutoplayPaused]);
 
   useEffect(() => {
     if (!carouselStories.length) return;
@@ -455,8 +511,10 @@ const Home = () => {
   };
 
   const onCarouselTouchStart = (event) => {
-    touchStartXRef.current = event.touches?.[0]?.clientX ?? null;
+    const startX = event.touches?.[0]?.clientX ?? null;
+    touchStartXRef.current = startX;
     touchDeltaXRef.current = 0;
+    touchStartTimeRef.current = Date.now();
   };
 
   const onCarouselTouchMove = (event) => {
@@ -468,14 +526,21 @@ const Home = () => {
 
   const onCarouselTouchEnd = () => {
     if (carouselStories.length <= 1) return;
-    const threshold = 45;
+    const durationMs = Math.max(1, Date.now() - touchStartTimeRef.current);
+    const velocity = Math.abs(touchDeltaXRef.current) / durationMs;
+    const baseThreshold = 52;
+    const momentumBoost = velocity > 0.55 ? 20 : velocity > 0.35 ? 10 : 0;
+    const threshold = Math.max(28, baseThreshold - momentumBoost);
+
     if (touchDeltaXRef.current <= -threshold) {
       setCarouselTrackIndex((prev) => prev + 1);
     } else if (touchDeltaXRef.current >= threshold) {
       setCarouselTrackIndex((prev) => prev - 1);
     }
+
     touchStartXRef.current = null;
     touchDeltaXRef.current = 0;
+    touchStartTimeRef.current = 0;
   };
 
   const onMobileCardTouchStart = (event) => {
@@ -487,7 +552,11 @@ const Home = () => {
   };
 
   const onMobileCardTouchMove = (event) => {
-    if (mobileTouchStartXRef.current == null || mobileTouchStartYRef.current == null) return;
+    if (
+      mobileTouchStartXRef.current == null ||
+      mobileTouchStartYRef.current == null
+    )
+      return;
     const currentX = event.touches?.[0]?.clientX;
     const currentY = event.touches?.[0]?.clientY;
     if (typeof currentX !== "number") return;
@@ -527,14 +596,18 @@ const Home = () => {
     const articleId = article._id;
     if (!articleId) return;
     setBookmarkBusyId(articleId);
-    if (bookmarkIdSet.has(articleId)) await removeBookmark(articleId);
-    else await addBookmark(articleId);
-    await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
-    setBookmarkBusyId(null);
+    try {
+      if (bookmarkIdSet.has(articleId)) await removeBookmark(articleId);
+      else await addBookmark(articleId);
+      await queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+    } finally {
+      setBookmarkBusyId(null);
+    }
   };
 
   const loadMoreStories = async () => {
     if (!meData?.user) return;
+    if (isActiveForYou) return;
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     const response = await getArticles({
@@ -563,6 +636,7 @@ const Home = () => {
 
   useEffect(() => {
     if (!meData?.user) return undefined;
+    if (isActiveForYou) return undefined;
     if (!autoLazyLoad || !hasMore) return;
     const node = lazySentinelRef.current;
     if (!node) return;
@@ -578,6 +652,7 @@ const Home = () => {
 
   useEffect(() => {
     if (!meData?.user || loadingMore || !hasMore) return;
+    if (isActiveForYou) return;
     if (typeof window === "undefined") return;
     const isMobile = window.matchMedia("(max-width: 767px)").matches;
     if (!isMobile) return;
@@ -622,27 +697,47 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="space-y-3 sm:space-y-10">
+    <div className="space-y-3 sm:space-y-9">
       {!meData?.user ? (
-        <section className="glass top-sheen rounded-2xl p-4 shadow-soft sm:rounded-[32px] sm:p-8">
-          <div className="flex flex-col gap-4 sm:gap-6">
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <Badge variant="glow">AI Curated</Badge>
-              <Badge>Reliable publishers</Badge>
-              <Badge>Focus mode feed</Badge>
+        <section className="fade-up-soft relative overflow-hidden rounded-2xl border border-border/70 bg-card/95 p-5 shadow-[0_20px_44px_-28px_rgba(15,23,42,0.46)] sm:rounded-[30px] sm:p-9">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_75%_18%,hsl(var(--primary)/0.13)_0%,transparent_62%)]" />
+          <div className="relative flex flex-col gap-4 sm:gap-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
+                <Sparkles className="h-3 w-3" />
+                AI Curated
+              </span>
+              <span className="inline-flex items-center rounded-full border border-border/75 bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                Reliable publishers
+              </span>
+              <span className="inline-flex items-center rounded-full border border-border/75 bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                Focus mode feed
+              </span>
             </div>
-            <h1 className="text-2xl sm:text-5xl">
-              Read less noise. Track more signal.
-            </h1>
-            <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-              FeedFocus combines trusted journalism with ranking intelligence so
-              every session starts with relevant top stories.
-            </p>
+            <div>
+              <h1 className="text-2xl font-semibold leading-[1.06] tracking-[-0.02em] sm:text-[3.4rem]">
+                Read less noise.
+                <br className="hidden sm:block" />
+                <span className="text-primary"> Track more signal.</span>
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+                FeedFocus combines trusted journalism with AI ranking
+                intelligence so every session starts with the stories that
+                actually matter.
+              </p>
+            </div>
             <div className="flex flex-wrap gap-3">
-              <Button onClick={() => navigate("/auth")}>
+              <Button
+                className="rounded-xl shadow-[0_10px_22px_-12px_hsl(var(--primary)/0.7)] transition duration-300 hover:-translate-y-0.5"
+                onClick={() => navigate("/auth")}
+              >
                 Sign in to personalize
               </Button>
-              <Button variant="outline" onClick={() => navigate("/feed")}>
+              <Button
+                variant="outline"
+                className="rounded-xl bg-card/80 transition duration-300 hover:-translate-y-0.5"
+                onClick={() => navigate("/feed")}
+              >
                 Browse all stories
               </Button>
             </div>
@@ -650,32 +745,34 @@ const Home = () => {
         </section>
       ) : null}
 
-      <section className="sticky top-11 z-30 space-y-2 bg-background/95 py-1 backdrop-blur-md sm:static sm:space-y-4 sm:bg-transparent sm:py-0 sm:backdrop-blur-none">
-        <div className="scrollbar-none -mx-0.5 flex snap-x gap-1.5 overflow-x-auto pb-1 pl-0.5 pr-0.5 sm:mx-0 sm:gap-3 sm:pb-2 sm:pl-0 sm:pr-0">
-          {categories.map((category) => (
-            <button
-              key={category.value}
-              type="button"
-              className={`snap-start whitespace-nowrap rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold transition-colors sm:px-4 sm:py-2 sm:text-sm ${
-                category.value === selectedTopic
-                  ? "border-accent bg-accent text-accent-foreground shadow-[0_10px_22px_-18px_hsl(var(--accent))]"
-                  : "border-border bg-card text-foreground hover:bg-muted"
-              }`}
-              onClick={() => {
-                if (category.value === selectedTopic) return;
-                setCategorySwitching(true);
-                const next = new URLSearchParams(searchParams);
-                if (category.value === "for-you") next.delete("topic");
-                else next.set("topic", category.value);
-                setSearchParams(next);
-              }}
-            >
-              <span className="mr-1.5 inline-flex align-middle">
-                <category.icon className="h-4 w-4" />
-              </span>
-              {category.label}
-            </button>
-          ))}
+      <section className="sticky top-11 z-30 bg-background/96 py-1.5 backdrop-blur-md sm:static sm:bg-transparent sm:py-0 sm:backdrop-blur-none">
+        <div className="relative">
+          <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-8 bg-gradient-to-r from-background/95 to-transparent sm:from-transparent" />
+          <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-8 bg-gradient-to-l from-background/95 to-transparent sm:from-transparent" />
+          <div className="chip-scroll -mx-0.5 flex snap-x flex-nowrap gap-1.5 overflow-x-auto pb-1 pl-0.5 pr-0.5 sm:mx-0 sm:gap-2 sm:pb-0">
+            {categories.map((category) => (
+              <button
+                key={category.value}
+                type="button"
+                className={`snap-start inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-all duration-300 sm:px-3.5 sm:py-2 sm:text-[13px] ${
+                  category.value === selectedTopic
+                    ? "border-primary/45 bg-primary text-primary-foreground shadow-[0_10px_24px_-14px_hsl(var(--primary)/0.95)]"
+                    : "border-border/70 bg-card/95 text-foreground/90 hover:-translate-y-0.5 hover:border-border hover:bg-muted/75 hover:text-foreground"
+                }`}
+                onClick={() => {
+                  if (category.value === selectedTopic) return;
+                  setCategorySwitching(true);
+                  const next = new URLSearchParams(searchParams);
+                  if (category.value === "for-you") next.delete("topic");
+                  else next.set("topic", category.value);
+                  setSearchParams(next);
+                }}
+              >
+                <category.icon className="h-3.5 w-3.5 shrink-0" />
+                {category.label}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -700,91 +797,136 @@ const Home = () => {
         ) : null}
 
         {!showInitialLoading && carouselStories.length ? (
-          <div
-            className="relative hidden overflow-hidden rounded-xl md:block md:rounded-3xl"
-            onTouchStart={onCarouselTouchStart}
-            onTouchMove={onCarouselTouchMove}
-            onTouchEnd={onCarouselTouchEnd}
-            onTouchCancel={onCarouselTouchEnd}
-          >
+          <div className="space-y-3">
             <div
-              className={`flex will-change-transform ${carouselAnimating ? "transition-transform duration-700 ease-out" : "transition-none"}`}
-              style={{ transform: `translateX(-${carouselTrackIndex * 100}%)` }}
-              onTransitionEnd={onCarouselTransitionEnd}
+              className="fade-up-soft relative hidden overflow-hidden rounded-2xl border border-border/65 bg-card/72 shadow-[0_26px_52px_-34px_rgba(0,0,0,0.62)] md:block md:rounded-3xl"
+              onMouseEnter={() => setCarouselHoverPaused(true)}
+              onMouseLeave={() => setCarouselHoverPaused(false)}
+              onFocusCapture={() => setCarouselHoverPaused(true)}
+              onBlurCapture={() => setCarouselHoverPaused(false)}
+              onTouchStart={onCarouselTouchStart}
+              onTouchMove={onCarouselTouchMove}
+              onTouchEnd={onCarouselTouchEnd}
+              onTouchCancel={onCarouselTouchEnd}
             >
-              {carouselSlides.map((article, index) => {
-                const key = article._id || article.url || article.title;
-                const isBookmarked = carouselBookmarkSet.has(key);
-                return (
-                  <div
-                    key={`${article._id || article.url || article.title}-${index}`}
-                    className="w-full flex-shrink-0"
+              <div
+                className={`flex will-change-transform ${carouselAnimating ? "transition-transform duration-700 ease-out" : "transition-none"}`}
+                style={{
+                  transform: `translateX(-${carouselTrackIndex * 100}%)`,
+                }}
+                onTransitionEnd={onCarouselTransitionEnd}
+              >
+                {carouselSlides.map((article, index) => {
+                  const isBookmarked = article._id
+                    ? bookmarkIdSet.has(article._id)
+                    : false;
+                  const isBusy = article._id
+                    ? bookmarkBusyId === article._id
+                    : false;
+                  return (
+                    <div
+                      key={`${article._id || article.url || article.title}-${index}`}
+                      className="w-full flex-shrink-0"
+                    >
+                      <BannerCard
+                        article={article}
+                        isBookmarked={isBookmarked}
+                        bookmarkBusy={isBusy}
+                        bookmarkDisabled={!article._id}
+                        onOpenArticle={(selectedArticle) => {
+                          const articleId = resolveArticleId(selectedArticle);
+                          if (articleId) {
+                            navigate(`/article/${articleId}`, {
+                              state: { article: selectedArticle },
+                            });
+                            return;
+                          }
+                          if (selectedArticle?.url) {
+                            window.open(
+                              selectedArticle.url,
+                              "_blank",
+                              "noopener,noreferrer",
+                            );
+                          }
+                        }}
+                        summaryBusy={aiLoadingId === article._id}
+                        onToggleBookmark={(selectedArticle) =>
+                          onBookmark(selectedArticle)
+                        }
+                        onShowSummary={async (selectedArticle) => {
+                          if (!meData?.user) {
+                            navigate("/auth");
+                            return;
+                          }
+                          const articleId = selectedArticle?._id;
+                          if (!articleId) return;
+                          if (
+                            aiSummaryById[articleId] &&
+                            !aiSummaryById[articleId].error
+                          ) {
+                            setActiveSummaryArticle(selectedArticle);
+                            return;
+                          }
+                          setAiLoadingId(articleId);
+                          const data = await getAiSummary(articleId);
+                          setAiSummaryById((prev) => ({
+                            ...prev,
+                            [articleId]: data,
+                          }));
+                          setAiLoadingId(null);
+                          if (!data?.error) {
+                            setActiveSummaryArticle(selectedArticle);
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              {carouselStories.length > 1 ? (
+                <>
+                  <button
+                    type="button"
+                    aria-label="Previous slide"
+                    onClick={() => setCarouselTrackIndex((prev) => prev - 1)}
+                    className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/35 bg-black/55 p-2 text-white backdrop-blur-xl transition duration-300 hover:scale-105 hover:bg-black/70 sm:left-3"
                   >
-                    <BannerCard
-                      article={article}
-                      isBookmarked={isBookmarked}
-                      summaryBusy={aiLoadingId === article._id}
-                      onToggleBookmark={(selectedArticle) => {
-                        const bookmarkKey =
-                          selectedArticle._id ||
-                          selectedArticle.url ||
-                          selectedArticle.title;
-                        setCarouselBookmarkSet((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(bookmarkKey)) next.delete(bookmarkKey);
-                          else next.add(bookmarkKey);
-                          return next;
-                        });
-                      }}
-                      onShowSummary={async (selectedArticle) => {
-                        if (!meData?.user) {
-                          navigate("/auth");
-                          return;
-                        }
-                        const articleId = selectedArticle?._id;
-                        if (!articleId) return;
-                        if (
-                          aiSummaryById[articleId] &&
-                          !aiSummaryById[articleId].error
-                        ) {
-                          setActiveSummaryArticle(selectedArticle);
-                          return;
-                        }
-                        setAiLoadingId(articleId);
-                        const data = await getAiSummary(articleId);
-                        setAiSummaryById((prev) => ({
-                          ...prev,
-                          [articleId]: data,
-                        }));
-                        setAiLoadingId(null);
-                        if (!data?.error) {
-                          setActiveSummaryArticle(selectedArticle);
-                        }
-                      }}
-                    />
-                  </div>
-                );
-              })}
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next slide"
+                    onClick={() => setCarouselTrackIndex((prev) => prev + 1)}
+                    className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/35 bg-black/55 p-2 text-white backdrop-blur-xl transition duration-300 hover:scale-105 hover:bg-black/70 sm:right-3"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              ) : null}
             </div>
+
             {carouselStories.length > 1 ? (
-              <>
-                <button
-                  type="button"
-                  aria-label="Previous slide"
-                  onClick={() => setCarouselTrackIndex((prev) => prev - 1)}
-                  className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/20 bg-black/38 p-1.5 text-white backdrop-blur-md transition hover:bg-black/55 sm:left-3 sm:p-2"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Next slide"
-                  onClick={() => setCarouselTrackIndex((prev) => prev + 1)}
-                  className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/20 bg-black/38 p-1.5 text-white backdrop-blur-md transition hover:bg-black/55 sm:right-3 sm:p-2"
-                >
-                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
-              </>
+              <div className="hidden justify-center md:flex">
+                <div className="flex items-center gap-1.5 rounded-full border border-border/65 bg-card/92 px-3 py-1.5 shadow-[0_12px_26px_-20px_rgba(0,0,0,0.55)]">
+                  {carouselStories.map((item, index) => (
+                    <button
+                      key={item._id || item.url || `${item.title}-${index}`}
+                      type="button"
+                      aria-label={`Go to slide ${index + 1}`}
+                      onClick={() => {
+                        if (carouselStories.length > 1) {
+                          setCarouselTrackIndex(index + 1);
+                        }
+                      }}
+                      className={`h-1.5 rounded-full transition-all ${
+                        activeCarouselIndex === index
+                          ? "w-5 bg-foreground"
+                          : "w-1.5 bg-foreground/45 hover:bg-foreground/70"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -810,24 +952,24 @@ const Home = () => {
                 const isBusy = bookmarkBusyId === articleId;
                 const aiPayload = articleId ? aiSummaryById[articleId] : null;
                 const isSummaryOpen = mobileSummaryOpenId === articleId;
-              const transitionPhase =
-                mobileSummaryTransition?.id === articleId
-                  ? mobileSummaryTransition.phase
-                  : null;
-              const fallbackImage = getCategoryPlaceholder(
-                article.primaryCategory || article.topics?.[0] || "world",
-              );
-              const imageSrc = article.imageUrl || fallbackImage;
-              const bodyText = isSummaryOpen
-                ? aiPayload?.summary || ""
-                : article.content || article.summary || "";
+                const transitionPhase =
+                  mobileSummaryTransition?.id === articleId
+                    ? mobileSummaryTransition.phase
+                    : null;
+                const fallbackImage = getCategoryPlaceholder(
+                  article.primaryCategory || article.topics?.[0] || "world",
+                );
+                const imageSrc = article.imageUrl || fallbackImage;
+                const bodyText = isSummaryOpen
+                  ? aiPayload?.summary || ""
+                  : article.content || article.summary || "";
 
                 return (
                   <div
                     key={`mobile-${article._id || article.url || article.title}-${index}`}
                     className="box-border w-full min-w-0 shrink-0 basis-full"
                   >
-                  <article className="flex h-[82dvh] flex-col overflow-hidden rounded-xl border border-border/80 bg-background/75 p-3 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)]">
+                    <article className="flex h-[82dvh] flex-col overflow-hidden rounded-xl border border-border/80 bg-background/75 p-3 shadow-[0_12px_24px_-20px_rgba(0,0,0,0.4)]">
                       <div className="relative mb-2.5">
                         <button
                           type="button"
@@ -884,6 +1026,22 @@ const Home = () => {
                           </p>
                         </div>
                         <div className="mt-2 flex w-full items-center gap-2">
+                          {articleId ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="flex-1"
+                              onClick={() => {
+                                const safeId = resolveArticleId(article);
+                                if (safeId)
+                                  navigate(`/article/${safeId}`, {
+                                    state: { article },
+                                  });
+                              }}
+                            >
+                              Read full
+                            </Button>
+                          ) : null}
                           <Button
                             size="sm"
                             variant="outline"
@@ -1061,32 +1219,45 @@ const Home = () => {
         ) : null}
 
         {!showInitialLoading && !stories.length ? (
-          <p className="py-2 text-center text-sm text-muted-foreground">
-            End of the road... for now. Our news robots are out fetching the
-            next scoop.
-          </p>
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-border/60 bg-card/80 py-16 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted/70 text-2xl">
+              📰
+            </div>
+            <div className="space-y-1">
+              <p className="font-semibold text-sm">No stories right now</p>
+              <p className="text-xs text-muted-foreground">
+                Our crawlers are fetching fresh news — check back soon.
+              </p>
+            </div>
+          </div>
         ) : null}
 
         <div className="hidden md:block">
-          {meData?.user && stories.length ? (
+          {meData?.user && stories.length && !isActiveForYou ? (
             hasMore ? (
-              <Button
-                className="w-full sm:w-auto"
-                variant="outline"
-                onClick={async () => {
-                  setAutoLazyLoad(true);
-                  await loadMoreStories();
-                }}
-                disabled={loadingMore}
-              >
-                {loadingMore ? "Loading..." : "Load more"}
-                {!loadingMore ? <ArrowRight className="h-4 w-4" /> : null}
-              </Button>
+              <div className="flex justify-center">
+                <Button
+                  className="rounded-xl px-6"
+                  variant="outline"
+                  onClick={async () => {
+                    setAutoLazyLoad(true);
+                    await loadMoreStories();
+                  }}
+                  disabled={loadingMore}
+                >
+                  {loadingMore
+                    ? "Loading more stories..."
+                    : "Load more stories"}
+                  {!loadingMore ? <ArrowRight className="h-4 w-4" /> : null}
+                </Button>
+              </div>
             ) : (
-              <p className="py-2 text-center text-sm text-muted-foreground">
-                End of the road... for now. Our news robots are out fetching the
-                next scoop.
-              </p>
+              <div className="flex items-center gap-3 rounded-xl border border-border/50 bg-muted/30 px-4 py-3">
+                <span className="text-base">✓</span>
+                <p className="text-xs text-muted-foreground">
+                  You&apos;ve reached the end. All caught up!
+                </p>
+              </div>
             )
           ) : null}
         </div>
@@ -1098,7 +1269,7 @@ const Home = () => {
           type="button"
           aria-label="Go to top"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-20 right-4 z-50 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border/80 bg-background/90 text-foreground shadow-soft backdrop-blur-md transition hover:bg-muted sm:bottom-28 sm:right-6 sm:h-11 sm:w-11"
+          className="fixed bottom-20 right-4 z-50 inline-flex h-10 w-10 items-center justify-center rounded-full border border-border/60 bg-background/95 text-foreground shadow-[0_8px_24px_-8px_rgba(0,0,0,0.2)] backdrop-blur-md transition hover:bg-muted active:scale-95 dark:shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)] sm:bottom-8 sm:right-6 sm:h-11 sm:w-11"
         >
           <ArrowUp className="h-4 w-4" />
         </button>

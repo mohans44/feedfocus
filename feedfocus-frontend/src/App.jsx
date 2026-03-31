@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Feed from "./pages/Feed";
 import { SearchResultsPage } from "./pages/Articles";
+import ArticleDetail from "./pages/ArticleDetail";
 
 const App = () => {
   return (
@@ -25,6 +26,7 @@ const App = () => {
           />
           <Route path="/feed" element={<Feed />} />
           <Route path="/search" element={<SearchResultsPage />} />
+          <Route path="/article/:id" element={<ArticleDetail />} />
           <Route
             path="/bookmarks"
             element={

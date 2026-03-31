@@ -165,14 +165,48 @@ const TOPIC_ALIASES = {
 };
 
 const URL_TOPIC_HINTS = {
-  india: ["/india", "/india-news", "/nation", "/cities", "/new-delhi", "/mumbai"],
-  technology: ["/technology", "/tech", "/gadgets", "/startup", "/science-and-tech"],
-  business: ["/business", "/markets", "/economy", "/finance", "/companies", "/industry"],
-  world: ["/world", "/international", "/global", "/asia", "/europe", "/middle-east"],
+  india: [
+    "/india",
+    "/india-news",
+    "/nation",
+    "/cities",
+    "/new-delhi",
+    "/mumbai",
+  ],
+  technology: [
+    "/technology",
+    "/tech",
+    "/gadgets",
+    "/startup",
+    "/science-and-tech",
+  ],
+  business: [
+    "/business",
+    "/markets",
+    "/economy",
+    "/finance",
+    "/companies",
+    "/industry",
+  ],
+  world: [
+    "/world",
+    "/international",
+    "/global",
+    "/asia",
+    "/europe",
+    "/middle-east",
+  ],
   health: ["/health", "/medical", "/wellness", "/fitness"],
   science: ["/science", "/space", "/climate", "/research", "/environment"],
   sports: ["/sports", "/cricket", "/football", "/nba", "/nfl", "/tennis"],
-  culture: ["/culture", "/entertainment", "/movies", "/music", "/art", "/lifestyle"],
+  culture: [
+    "/culture",
+    "/entertainment",
+    "/movies",
+    "/music",
+    "/art",
+    "/lifestyle",
+  ],
   fashion: ["/fashion", "/style", "/beauty"],
   food: ["/food", "/recipe", "/recipes", "/dining"],
   travel: ["/travel", "/tourism", "/destinations", "/flights"],
@@ -186,27 +220,53 @@ const tokenize = (value = "") =>
     .split(/\s+/)
     .filter(Boolean);
 
-export const normalizeTopic = (value = "") =>
-  TOPIC_ALIASES[String(value).trim().toLowerCase().replace(/\s+/g, "-")] || null;
-
-const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const inferTopicScores = (text = "") => {
+const scoreKeywordsInText = (keywords = [], text = "") => {
   const lowerText = text.toLowerCase();
   const tokenSet = new Set(tokenize(text));
+
+  return keywords.reduce((acc, keyword) => {
+    if (keyword.includes(" ")) {
+      return acc + (lowerText.includes(keyword) ? 2 : 0);
+    }
+    return acc + (tokenSet.has(keyword) ? 1 : 0);
+  }, 0);
+};
+
+export const normalizeTopic = (value = "") =>
+  TOPIC_ALIASES[String(value).trim().toLowerCase().replace(/\s+/g, "-")] ||
+  null;
+
+const escapeRegex = (value = "") =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const inferTopicScores = (text = "") => {
   const matches = [];
 
   for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS)) {
-    const score = keywords.reduce((acc, keyword) => {
-      if (keyword.includes(" ")) {
-        return acc + (lowerText.includes(keyword) ? 2 : 0);
-      }
-      return acc + (tokenSet.has(keyword) ? 1 : 0);
-    }, 0);
+    const score = scoreKeywordsInText(keywords, text);
 
     if (score > 0) {
       matches.push({ topic, score });
     }
+  }
+
+  return matches.sort((a, b) => b.score - a.score);
+};
+
+const inferTopicScoresFromArticle = (article = {}) => {
+  const titleText = String(article.title || "");
+  const summaryText = String(article.summary || "");
+  const contentText = String(article.content || "").slice(0, 6000);
+  const urlText = String(article.url || "");
+
+  const matches = [];
+  for (const [topic, keywords] of Object.entries(TOPIC_KEYWORDS)) {
+    const titleScore = scoreKeywordsInText(keywords, titleText) * 2.4;
+    const summaryScore = scoreKeywordsInText(keywords, summaryText) * 1.7;
+    const contentScore = scoreKeywordsInText(keywords, contentText) * 1;
+    const urlScore = scoreKeywordsInText(keywords, urlText) * 1.4;
+    const score = titleScore + summaryScore + contentScore + urlScore;
+    if (score > 0) matches.push({ topic, score });
   }
 
   return matches.sort((a, b) => b.score - a.score);
@@ -218,21 +278,17 @@ export const inferTopicsFromText = (text = "") => {
     return ["world"];
   }
 
-  return scores
-    .slice(0, 3)
-    .map((item) => item.topic);
+  return scores.slice(0, 3).map((item) => item.topic);
 };
 
 export const enrichArticleTopics = (article = {}) => {
   const lowerUrl = String(article.url || "").toLowerCase();
   const urlPrimary =
-    Object.entries(URL_TOPIC_HINTS).find(([, hints]) => hints.some((hint) => lowerUrl.includes(hint)))?.[0] ||
-    null;
+    Object.entries(URL_TOPIC_HINTS).find(([, hints]) =>
+      hints.some((hint) => lowerUrl.includes(hint)),
+    )?.[0] || null;
 
-  const text = `${article.title || ""} ${article.summary || ""} ${(article.content || "").slice(0, 4000)} ${
-    article.url || ""
-  }`;
-  const inferredScores = inferTopicScores(text);
+  const inferredScores = inferTopicScoresFromArticle(article);
   const inferred = inferredScores.map((item) => item.topic);
   const existing = (Array.isArray(article.topics) ? article.topics : [])
     .map((item) => normalizeTopic(item))
@@ -240,18 +296,26 @@ export const enrichArticleTopics = (article = {}) => {
 
   const savedPrimary = normalizeTopic(article.primaryCategory);
   const strongestInferred = inferred[0] || null;
-  const strongestExisting = existing.find((item) => item !== "world") || existing[0] || null;
+  const strongestExisting =
+    existing.find((item) => item !== "world") || existing[0] || null;
 
-  let primaryCategory = urlPrimary || strongestInferred || savedPrimary || strongestExisting || "world";
+  let primaryCategory =
+    urlPrimary ||
+    strongestInferred ||
+    savedPrimary ||
+    strongestExisting ||
+    "world";
   if (urlPrimary) {
     primaryCategory = urlPrimary;
-  } else if (strongestInferred && inferredScores[0]?.score >= 2) {
+  } else if (strongestInferred && inferredScores[0]?.score >= 2.5) {
     primaryCategory = strongestInferred;
   } else if (savedPrimary && savedPrimary !== "world") {
     primaryCategory = savedPrimary;
   }
 
-  const topics = Array.from(new Set([primaryCategory, ...inferred, ...existing].filter(Boolean))).slice(0, 3);
+  const topics = Array.from(
+    new Set([primaryCategory, ...inferred, ...existing].filter(Boolean)),
+  ).slice(0, 3);
 
   return {
     ...article,
@@ -269,13 +333,10 @@ export const isArticleInTopic = (article = {}, topic = "") => {
     return true;
   }
 
-  const text = `${article.title || ""} ${article.summary || ""} ${(article.content || "").slice(0, 1800)} ${
-    article.url || ""
-  }`;
-  const scores = inferTopicScores(text);
+  const scores = inferTopicScoresFromArticle(article);
   const topHit = scores[0];
   if (!topHit) return false;
-  return topHit.topic === normalized && topHit.score >= 2;
+  return topHit.topic === normalized && topHit.score >= 2.5;
 };
 
 export const topicFilterClause = (topic) => {
@@ -308,10 +369,23 @@ export const preferenceScore = (article, preferences = []) => {
   const normalizedPrefs = preferences
     .map((pref) => normalizeTopic(pref) || String(pref).toLowerCase())
     .filter(Boolean);
-  const topicHits = (article.topics || []).filter((topic) => normalizedPrefs.includes(topic)).length;
-  const ageHours = Math.max(1, (Date.now() - new Date(article.publishedAt).getTime()) / (1000 * 60 * 60));
+  const primaryHit = normalizedPrefs.includes(article.primaryCategory) ? 1 : 0;
+  const secondaryHits = (article.topics || []).filter((topic) =>
+    normalizedPrefs.includes(topic),
+  ).length;
+  const publishedAt = new Date(article.publishedAt).getTime();
+  const ageHours = Number.isFinite(publishedAt)
+    ? Math.max(1, (Date.now() - publishedAt) / (1000 * 60 * 60))
+    : 24;
   const recency = 1 / Math.log2(ageHours + 2);
-  const richness = Math.min((article.summary || "").length / 250, 1);
+  const summaryRichness = Math.min((article.summary || "").length / 220, 1);
+  const contentRichness = Math.min((article.content || "").length / 1200, 1);
 
-  return topicHits * 2.2 + recency * 1.2 + richness * 0.4;
+  return (
+    primaryHit * 2.8 +
+    secondaryHits * 1.4 +
+    recency * 1.2 +
+    summaryRichness * 0.35 +
+    contentRichness * 0.25
+  );
 };

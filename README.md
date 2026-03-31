@@ -61,7 +61,7 @@ VITE_API_BASE_URL=http://localhost:8080
 
 - Signup expects: `username`, `password`, `preferences` (min 4)
 - Login accepts either `username` or `email` via `identifier`
-- Session auth uses secure cookies (`httpOnly`)
+- Session auth supports secure cookies (`httpOnly`) with bearer-token fallback for stricter browser privacy engines
 - Main APIs:
   - `POST /api/auth/register`
   - `POST /api/auth/login`

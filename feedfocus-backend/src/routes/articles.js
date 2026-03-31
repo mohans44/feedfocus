@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import { Article } from "../models/Article.js";
 import { User } from "../models/User.js";
 import { authRequired } from "../middleware/auth.js";
@@ -11,6 +12,8 @@ import {
 
 const router = express.Router();
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const isValidObjectId = (value) =>
+  mongoose.Types.ObjectId.isValid(String(value || ""));
 const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const CLOUDFLARE_AI_MODEL =
@@ -29,8 +32,14 @@ const summarizeText = (content = "", maxSentences = 4) => {
   const scored = rawSentences.map((sentence, index) => {
     const score =
       (sentence.length > 90 ? 1.2 : 0.8) +
-      (/\b(according|said|announced|reported|confirmed|expects)\b/i.test(sentence) ? 0.6 : 0) +
-      (/\b(today|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(sentence)
+      (/\b(according|said|announced|reported|confirmed|expects)\b/i.test(
+        sentence,
+      )
+        ? 0.6
+        : 0) +
+      (/\b(today|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(
+        sentence,
+      )
         ? 0.3
         : 0) -
       index * 0.015;
@@ -54,13 +63,16 @@ const consumeAiSummaryQuota = async (userId) => {
       "aiSummaryUsage.dateKey": today,
       "aiSummaryUsage.count": { $lt: AI_SUMMARY_DAILY_LIMIT },
     },
-    { $inc: { "aiSummaryUsage.count": 1 } }
+    { $inc: { "aiSummaryUsage.count": 1 } },
   );
   if (incExisting.modifiedCount === 1) {
     const current = await User.findById(userId).select("aiSummaryUsage");
     return {
       allowed: true,
-      remaining: Math.max(0, AI_SUMMARY_DAILY_LIMIT - (current?.aiSummaryUsage?.count || 0)),
+      remaining: Math.max(
+        0,
+        AI_SUMMARY_DAILY_LIMIT - (current?.aiSummaryUsage?.count || 0),
+      ),
     };
   }
 
@@ -77,7 +89,7 @@ const consumeAiSummaryQuota = async (userId) => {
         "aiSummaryUsage.dateKey": today,
         "aiSummaryUsage.count": 1,
       },
-    }
+    },
   );
   if (resetForToday.modifiedCount === 1) {
     return {
@@ -87,7 +99,10 @@ const consumeAiSummaryQuota = async (userId) => {
   }
 
   const current = await User.findById(userId).select("aiSummaryUsage");
-  const used = current?.aiSummaryUsage?.dateKey === today ? current.aiSummaryUsage.count || 0 : 0;
+  const used =
+    current?.aiSummaryUsage?.dateKey === today
+      ? current.aiSummaryUsage.count || 0
+      : 0;
   return {
     allowed: false,
     remaining: Math.max(0, AI_SUMMARY_DAILY_LIMIT - used),
@@ -111,7 +126,10 @@ const parseModelJson = (raw = "") => {
 };
 
 const buildAiPrompt = (article) => {
-  const content = String(article.content || article.summary || "").slice(0, 8000);
+  const content = String(article.content || article.summary || "").slice(
+    0,
+    8000,
+  );
   return [
     "You summarize news into a concise 1-minute brief.",
     "Return STRICT JSON with keys: summary, keyPoints, category.",
@@ -129,6 +147,28 @@ const buildAiPrompt = (article) => {
   ].join("\n");
 };
 
+const buildAiCorrectionPrompt = (article) => {
+  const content = String(article.content || article.summary || "").slice(
+    0,
+    10000,
+  );
+  return [
+    "You are a newsroom editor. Rewrite article text to be clean, factual, and readable.",
+    "Return STRICT JSON with keys: title, correctedContent, highlights.",
+    "Rules:",
+    "- title: concise and corrected (max 120 chars)",
+    "- correctedContent: preserve all key facts, remove noise, fix grammar, keep neutral tone, 5-15 paragraphs.",
+    "- highlights: array of 3 to 5 short bullet points.",
+    "- Do not add facts that are not present in source text.",
+    "",
+    `Original title: ${article.title || ""}`,
+    `Publisher: ${article.publisher || ""}`,
+    `PublishedAt: ${article.publishedAt ? new Date(article.publishedAt).toISOString() : ""}`,
+    `Source URL: ${article.url || ""}`,
+    `Source text: ${content}`,
+  ].join("\n");
+};
+
 const CLOUDFLARE_MODEL_CANDIDATES = [
   CLOUDFLARE_AI_MODEL,
   "@cf/meta/llama-3.1-8b-instruct",
@@ -143,10 +183,13 @@ const callCloudflareGenerate = async (model, prompt) => {
   }
   // Cloudflare expects model path segments, e.g. /ai/run/@cf/meta/llama-3.1-8b-instruct
   // Do not encode "/" into "%2F" or route resolution fails with 7000.
-  const modelPath = normalizedModel.split("/").map((part) => encodeURIComponent(part)).join("/");
+  const modelPath = normalizedModel
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
   const response = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(
-      CLOUDFLARE_ACCOUNT_ID
+      CLOUDFLARE_ACCOUNT_ID,
     )}/ai/run/${modelPath}`,
     {
       method: "POST",
@@ -159,7 +202,7 @@ const callCloudflareGenerate = async (model, prompt) => {
         max_tokens: 500,
         temperature: 0.2,
       }),
-    }
+    },
   );
   return response;
 };
@@ -176,7 +219,7 @@ const extractCloudflareText = (payload = {}) => {
           ? item
           : typeof item?.text === "string"
             ? item.text
-            : ""
+            : "",
       )
       .join(" ");
   }
@@ -186,12 +229,12 @@ const extractCloudflareText = (payload = {}) => {
 const generateCloudflareSummary = async (article) => {
   if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN) {
     throw new Error(
-      "AI provider is not configured (CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN missing)"
+      "AI provider is not configured (CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN missing)",
     );
   }
   if (String(CLOUDFLARE_ACCOUNT_ID).includes("@")) {
     throw new Error(
-      "Invalid CLOUDFLARE_ACCOUNT_ID: looks like an email. Use Cloudflare Account ID (hex string), not email."
+      "Invalid CLOUDFLARE_ACCOUNT_ID: looks like an email. Use Cloudflare Account ID (hex string), not email.",
     );
   }
 
@@ -217,7 +260,9 @@ const generateCloudflareSummary = async (article) => {
   }
 
   if (!payload) {
-    throw new Error(lastError || "Cloudflare AI request failed for all candidate models");
+    throw new Error(
+      lastError || "Cloudflare AI request failed for all candidate models",
+    );
   }
 
   const text = extractCloudflareText(payload);
@@ -227,14 +272,21 @@ const generateCloudflareSummary = async (article) => {
   }
 
   const enriched = enrichArticleTopics(article);
-  const summaryText = String(parsed.summary || "").replace(/\s+/g, " ").trim();
+  const summaryText = String(parsed.summary || "")
+    .replace(/\s+/g, " ")
+    .trim();
   const keyPoints = Array.isArray(parsed.keyPoints)
     ? parsed.keyPoints
-        .map((item) => String(item || "").replace(/\s+/g, " ").trim())
+        .map((item) =>
+          String(item || "")
+            .replace(/\s+/g, " ")
+            .trim(),
+        )
         .filter(Boolean)
         .slice(0, 5)
     : [];
-  const category = normalizeTopic(parsed.category) || enriched.primaryCategory || "world";
+  const category =
+    normalizeTopic(parsed.category) || enriched.primaryCategory || "world";
 
   if (!summaryText) {
     throw new Error("AI provider returned empty summary");
@@ -249,12 +301,87 @@ const generateCloudflareSummary = async (article) => {
   };
 };
 
+const generateCloudflareCorrection = async (article) => {
+  if (!CLOUDFLARE_ACCOUNT_ID || !CLOUDFLARE_API_TOKEN) {
+    throw new Error(
+      "AI provider is not configured (CLOUDFLARE_ACCOUNT_ID/CLOUDFLARE_API_TOKEN missing)",
+    );
+  }
+
+  const prompt = buildAiCorrectionPrompt(article);
+  let payload = null;
+  let selectedModel = "";
+  let lastError = "";
+
+  for (const model of CLOUDFLARE_MODEL_CANDIDATES) {
+    const response = await callCloudflareGenerate(model, prompt);
+    if (!response.ok) {
+      const body = await response.text();
+      lastError = `Cloudflare AI correction failed for ${model} (${response.status}): ${body.slice(0, 240)}`;
+      if (response.status === 404 || response.status === 400) {
+        continue;
+      }
+      throw new Error(lastError);
+    }
+
+    payload = await response.json();
+    selectedModel = model;
+    break;
+  }
+
+  if (!payload) {
+    throw new Error(
+      lastError || "Cloudflare AI correction failed for all candidate models",
+    );
+  }
+
+  const text = extractCloudflareText(payload);
+  const parsed = parseModelJson(text);
+  if (!parsed) {
+    throw new Error("AI provider returned invalid JSON for correction");
+  }
+
+  const correctedTitle = String(parsed.title || article.title || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const correctedContent = String(parsed.correctedContent || "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  const highlights = Array.isArray(parsed.highlights)
+    ? parsed.highlights
+        .map((item) =>
+          String(item || "")
+            .replace(/\s+/g, " ")
+            .trim(),
+        )
+        .filter(Boolean)
+        .slice(0, 5)
+    : [];
+
+  if (!correctedContent) {
+    throw new Error("AI provider returned empty corrected content");
+  }
+
+  return {
+    title: correctedTitle || article.title,
+    content: correctedContent,
+    highlights,
+    generatedAt: new Date(),
+    model: selectedModel || CLOUDFLARE_AI_MODEL,
+  };
+};
+
 router.get("/", async (req, res) => {
   try {
-    res.set("Cache-Control", "public, max-age=30, s-maxage=60, stale-while-revalidate=180");
+    res.set(
+      "Cache-Control",
+      "public, max-age=30, s-maxage=60, stale-while-revalidate=180",
+    );
     const { limit = 20, cursor, topic, publisher, search } = req.query;
     const parsedLimit = parseInt(String(limit), 10);
-    const safeLimit = Number.isFinite(parsedLimit) ? Math.min(Math.max(parsedLimit, 1), 50) : 20;
+    const safeLimit = Number.isFinite(parsedLimit)
+      ? Math.min(Math.max(parsedLimit, 1), 50)
+      : 20;
     const normalizedTopic = normalizeTopic(topic);
 
     const filterClauses = [];
@@ -264,7 +391,12 @@ router.get("/", async (req, res) => {
         filterClauses.push({ publishedAt: { $lt: cursorDate } });
       }
     }
-    if (topic && (!normalizedTopic || normalizedTopic === "top-stories" || normalizedTopic === "for-you")) {
+    if (
+      topic &&
+      (!normalizedTopic ||
+        normalizedTopic === "top-stories" ||
+        normalizedTopic === "for-you")
+    ) {
       const topicClause = topicFilterClause(topic);
       if (Object.keys(topicClause).length) filterClauses.push(topicClause);
     }
@@ -275,8 +407,8 @@ router.get("/", async (req, res) => {
       const pattern = escapeRegex(String(search).trim());
       filterClauses.push({
         $or: [
-        { title: { $regex: pattern, $options: "i" } },
-        { summary: { $regex: pattern, $options: "i" } },
+          { title: { $regex: pattern, $options: "i" } },
+          { summary: { $regex: pattern, $options: "i" } },
           { content: { $regex: pattern, $options: "i" } },
         ],
       });
@@ -286,7 +418,11 @@ router.get("/", async (req, res) => {
     let data = [];
     let hasMore = false;
 
-    if (normalizedTopic && normalizedTopic !== "top-stories" && normalizedTopic !== "for-you") {
+    if (
+      normalizedTopic &&
+      normalizedTopic !== "top-stories" &&
+      normalizedTopic !== "for-you"
+    ) {
       const candidatePoolSize = Math.min(Math.max(safeLimit * 14, 180), 800);
       const candidates = await Article.find(filter)
         .sort({ publishedAt: -1 })
@@ -307,11 +443,13 @@ router.get("/", async (req, res) => {
 
       hasMore = articles.length > safeLimit;
       data = (hasMore ? articles.slice(0, safeLimit) : articles).map((item) =>
-        enrichArticleTopics(item)
+        enrichArticleTopics(item),
       );
     }
 
-    const nextCursor = hasMore ? data[data.length - 1].publishedAt.toISOString() : null;
+    const nextCursor = hasMore
+      ? data[data.length - 1].publishedAt.toISOString()
+      : null;
 
     return res.json({ items: data, nextCursor });
   } catch (error) {
@@ -319,9 +457,85 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/:id", async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ error: "Article not found" });
+    }
+    const article = await Article.findById(req.params.id).lean();
+    if (!article) {
+      return res.status(404).json({ error: "Article not found" });
+    }
+
+    return res.json({ item: enrichArticleTopics(article) });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch article" });
+  }
+});
+
+const handleAiCorrection = async (req, res) => {
+  try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(404).json({ error: "Article not found" });
+    }
+    const force = String(req.query.force || "") === "1";
+    const article = await Article.findById(req.params.id);
+    if (!article) {
+      return res.status(404).json({ error: "Article not found" });
+    }
+
+    if (article.aiCorrected?.content && !force) {
+      return res.json({
+        articleId: article._id,
+        correctedTitle: article.aiCorrected.title || article.title,
+        correctedContent: article.aiCorrected.content,
+        highlights: article.aiCorrected.highlights || [],
+        generatedAt: article.aiCorrected.generatedAt,
+        model: article.aiCorrected.model,
+      });
+    }
+
+    const sourceContent = String(
+      article.content || article.summary || "",
+    ).trim();
+    if (!sourceContent) {
+      return res
+        .status(400)
+        .json({ error: "Article has no content to correct" });
+    }
+
+    const corrected = await generateCloudflareCorrection(article.toObject());
+    article.aiCorrected = corrected;
+    await article.save();
+
+    return res.json({
+      articleId: article._id,
+      correctedTitle: corrected.title,
+      correctedContent: corrected.content,
+      highlights: corrected.highlights,
+      generatedAt: corrected.generatedAt,
+      model: corrected.model,
+    });
+  } catch (error) {
+    console.error("AI correction error:", error.message);
+    return res.status(500).json({
+      error:
+        process.env.NODE_ENV === "production"
+          ? "Failed to AI-correct article"
+          : `Failed to AI-correct article: ${error.message}`,
+    });
+  }
+};
+
+router.get("/:id/ai-corrected", handleAiCorrection);
+router.get("/:id/ai-correct", handleAiCorrection);
+
 const handleAiSummary = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!isValidObjectId(id)) {
+      return res.status(404).json({ error: "Article not found" });
+    }
     const force = String(req.query.force || "") === "1";
 
     const article = await Article.findById(id);
@@ -334,7 +548,8 @@ const handleAiSummary = async (req, res) => {
         articleId: article._id,
         summary: article.aiSummary.text,
         keyPoints: article.aiSummary.keyPoints || [],
-        category: article.aiSummary.category || article.primaryCategory || "world",
+        category:
+          article.aiSummary.category || article.primaryCategory || "world",
         generatedAt: article.aiSummary.generatedAt,
         model: article.aiSummary.model || "heuristic-1min-v1",
       });

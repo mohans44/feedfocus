@@ -9,7 +9,7 @@ React + Vite frontend for Feed Focus, styled with Tailwind and shadcn-style UI c
 - Tailwind CSS
 - React Query
 - React Router
-- Axios (cookie-based auth requests)
+- Axios auth requests with cookie session and bearer-token fallback
 
 ## Local setup
 
