@@ -17,6 +17,31 @@ const cookieOptions = {
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const usernameRegex = /^[a-zA-Z0-9_.-]{3,30}$/;
 
+const parseAuthError = (error) => {
+  if (error?.name === "MongoServerError" && error?.code === 11000) {
+    const key = Object.keys(error?.keyPattern || {})[0];
+    if (key === "username") {
+      return { status: 409, error: "Username already in use" };
+    }
+    if (key === "email") {
+      return { status: 409, error: "Email already in use" };
+    }
+    return { status: 409, error: "Account already exists" };
+  }
+  if (error?.name === "ValidationError") {
+    return { status: 400, error: "Invalid registration data" };
+  }
+  if (
+    error instanceof TypeError &&
+    String(error?.message || "")
+      .toLowerCase()
+      .includes("samesite")
+  ) {
+    return { status: 500, error: "Server cookie configuration error" };
+  }
+  return { status: 500, error: "Registration failed" };
+};
+
 router.post("/register", async (req, res) => {
   try {
     const { username, email, password, preferences = [] } = req.body || {};
@@ -24,11 +49,18 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "Username and password required" });
     }
     if (password.length < 8) {
-      return res.status(400).json({ error: "Password must be at least 8 characters" });
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 8 characters" });
     }
     const normalizedUsername = String(username).toLowerCase().trim();
     if (!usernameRegex.test(normalizedUsername)) {
-      return res.status(400).json({ error: "Username must be 3-30 chars and can include letters, numbers, ., -, _" });
+      return res
+        .status(400)
+        .json({
+          error:
+            "Username must be 3-30 chars and can include letters, numbers, ., -, _",
+        });
     }
     const normalizedEmail = email
       ? String(email).toLowerCase().trim()
@@ -37,7 +69,13 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ error: "Invalid email format" });
     }
     const normalizedPreferences = Array.isArray(preferences)
-      ? [...new Set(preferences.filter(Boolean).map((item) => String(item).toLowerCase().trim()))].slice(0, 25)
+      ? [
+          ...new Set(
+            preferences
+              .filter(Boolean)
+              .map((item) => String(item).toLowerCase().trim()),
+          ),
+        ].slice(0, 25)
       : [];
     if (normalizedPreferences.length < 4) {
       return res.status(400).json({ error: "Select at least 4 preferences" });
@@ -62,10 +100,17 @@ router.post("/register", async (req, res) => {
     res.cookie(env.cookieName, token, cookieOptions);
     return res.status(201).json({
       token,
-      user: { id: user._id, username: user.username, email: user.email, preferences: user.preferences },
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        preferences: user.preferences,
+      },
     });
   } catch (error) {
-    return res.status(500).json({ error: "Registration failed" });
+    const parsed = parseAuthError(error);
+    console.error("Register failed:", error?.message || error);
+    return res.status(parsed.status).json({ error: parsed.error });
   }
 });
 
@@ -76,7 +121,9 @@ router.post("/login", async (req, res) => {
       .toLowerCase()
       .trim();
     if (!loginId || !password) {
-      return res.status(400).json({ error: "Username/email and password required" });
+      return res
+        .status(400)
+        .json({ error: "Username/email and password required" });
     }
     const lookup = emailRegex.test(loginId)
       ? { email: loginId }
@@ -95,9 +142,25 @@ router.post("/login", async (req, res) => {
     res.cookie(env.cookieName, token, cookieOptions);
     return res.status(200).json({
       token,
-      user: { id: user._id, username: user.username, email: user.email, preferences: user.preferences },
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        preferences: user.preferences,
+      },
     });
   } catch (error) {
+    console.error("Login failed:", error?.message || error);
+    if (
+      error instanceof TypeError &&
+      String(error?.message || "")
+        .toLowerCase()
+        .includes("samesite")
+    ) {
+      return res
+        .status(500)
+        .json({ error: "Server cookie configuration error" });
+    }
     return res.status(500).json({ error: "Login failed" });
   }
 });

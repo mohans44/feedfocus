@@ -2,7 +2,18 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const normalizeOrigin = (value = "") => String(value).trim().replace(/\/+$/, "").toLowerCase();
+const normalizeOrigin = (value = "") =>
+  String(value).trim().replace(/\/+$/, "").toLowerCase();
+
+const normalizeSameSite = (value = "lax") => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (["lax", "strict", "none"].includes(normalized)) {
+    return normalized;
+  }
+  return "lax";
+};
 
 const required = ["MONGO_URI", "JWT_SECRET", "FRONTEND_URL"];
 
@@ -21,7 +32,9 @@ export const env = {
     .filter(Boolean),
   cookieName: process.env.COOKIE_NAME || "ff_session",
   jwtExpiryDays: 30,
-  cookieSameSite: process.env.COOKIE_SAMESITE || "lax",
+  cookieSameSite: normalizeSameSite(process.env.COOKIE_SAMESITE || "lax"),
   cookieSecure:
-    process.env.COOKIE_SECURE === "true" || process.env.NODE_ENV === "production",
+    process.env.COOKIE_SECURE === "true" ||
+    process.env.NODE_ENV === "production" ||
+    normalizeSameSite(process.env.COOKIE_SAMESITE || "lax") === "none",
 };
